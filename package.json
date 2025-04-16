@@ -3,9 +3,11 @@
   "version": "0.1.0-beta.1",
   "description": "Wallet management utilities for TON",
   "main": "index.js",
+  "type": "module",
   "types": "index.d.ts",
   "dependencies": {
     "@ton/crypto": "^3.3.0",
-    "@ton/ton": "15.1.0"
+    "@ton/ton": "15.1.0",
+    "tweetnacl": "^1.0.3"
   }
 }
