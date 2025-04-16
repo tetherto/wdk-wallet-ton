@@ -17,20 +17,20 @@
  * @fileoverview Wallet service for TON blockchain using mnemonic and key pairs
  */
 
-import { 
-  mnemonicNew, 
-  mnemonicValidate, 
+import {
+  mnemonicNew,
+  mnemonicValidate,
   mnemonicToSeed,
   mnemonicToPrivateKey,
-  keyPairFromSeed, 
-  keyPairFromSecretKey, 
-  sign, 
+  keyPairFromSeed,
+  keyPairFromSecretKey,
+  sign,
   signVerify
-} from '@ton/crypto';
+} from '@ton/crypto'
 
-import { WalletContractV5R1 } from "@ton/ton";
+import { WalletContractV5R1 } from '@ton/ton'
 
-import nacl from 'tweetnacl';
+import nacl from 'tweetnacl'
 
 /**
  * @typedef {import('@ton/crypto').KeyPair} KeyPair
@@ -45,19 +45,19 @@ export class WDKWalletManagementTON {
    * @returns {Promise<{mnemonic: string[], keyPair: KeyPair}>} A new wallet instance with mnemonic and key pair
    * @throws {Error} If wallet creation fails
    */
-  async createWallet() {
+  async createWallet () {
     return new Promise(async (resolve, reject) => {
       try {
-        const mnemonic = await mnemonicNew(24);
-        const keyPair = await mnemonicToPrivateKey(mnemonic);
+        const mnemonic = await mnemonicNew(24)
+        const keyPair = await mnemonicToPrivateKey(mnemonic)
         resolve({
           mnemonic,
           keyPair
-        });
+        })
       } catch (error) {
-        reject(new Error("Failed to create wallet: " + error.message));
+        reject(new Error('Failed to create wallet: ' + error.message))
       }
-    });
+    })
   }
 
   /**
@@ -66,21 +66,21 @@ export class WDKWalletManagementTON {
    * @returns {Promise<KeyPair>} The restored key pair
    * @throws {Error} If mnemonic phrase is empty or invalid
    */
-  async restoreWalletFromPhrase(mnemonicPhrase) {
+  async restoreWalletFromPhrase (mnemonicPhrase) {
     if (!mnemonicPhrase || !Array.isArray(mnemonicPhrase)) {
-      throw new Error("Mnemonic phrase must be an array of words.");
+      throw new Error('Mnemonic phrase must be an array of words.')
     }
 
     try {
-      const isValid = await mnemonicValidate(mnemonicPhrase);
+      const isValid = await mnemonicValidate(mnemonicPhrase)
       if (!isValid) {
-        throw new Error("Invalid mnemonic phrase");
+        throw new Error('Invalid mnemonic phrase')
       }
-      return await mnemonicToPrivateKey(mnemonicPhrase);
+      return await mnemonicToPrivateKey(mnemonicPhrase)
     } catch (error) {
       throw new Error(
-        "Failed to restore wallet from mnemonic: " + error.message
-      );
+        'Failed to restore wallet from mnemonic: ' + error.message
+      )
     }
   }
 
@@ -89,11 +89,11 @@ export class WDKWalletManagementTON {
    * @param {string[]} mnemonicPhrase - The mnemonic phrase to validate
    * @returns {Promise<boolean>} Whether the mnemonic is valid
    */
-  async validateMnemonic(mnemonicPhrase) {
+  async validateMnemonic (mnemonicPhrase) {
     if (!mnemonicPhrase || !Array.isArray(mnemonicPhrase)) {
-      return false;
+      return false
     }
-    return await mnemonicValidate(mnemonicPhrase);
+    return await mnemonicValidate(mnemonicPhrase)
   }
 
   /**
@@ -102,11 +102,11 @@ export class WDKWalletManagementTON {
    * @returns {Promise<string[]>} The generated mnemonic phrase
    * @throws {Error} If mnemonic generation fails
    */
-  async generateMnemonic(wordCount = 24) {
+  async generateMnemonic (wordCount = 24) {
     try {
-      return await mnemonicNew(wordCount);
+      return await mnemonicNew(wordCount)
     } catch (error) {
-      throw new Error("Failed to generate mnemonic: " + error.message);
+      throw new Error('Failed to generate mnemonic: ' + error.message)
     }
   }
 
@@ -115,8 +115,8 @@ export class WDKWalletManagementTON {
    * @param {string[]} src - The mnemonic phrase
    * @returns {string[]} The normalized mnemonic phrase
    */
-  normalizeMnemonic(src) {
-    return src.map((v) => v.toLowerCase().trim());
+  normalizeMnemonic (src) {
+    return src.map((v) => v.toLowerCase().trim())
   }
 
   /**
@@ -125,26 +125,26 @@ export class WDKWalletManagementTON {
    * @param {string} [seed] - Optional seed (e.g. "TON default seed")
    * @returns {Promise<Object|null>} Wallet details including key pair
    */
-  async getWalletDetails(mnemonicPhrase, seed) {
+  async getWalletDetails (mnemonicPhrase, seed) {
     try {
-      const mnemonicArray = this.normalizeMnemonic(mnemonicPhrase);
-      const seedBuffer = (await mnemonicToSeed(mnemonicArray, seed ? seed : 'TON default seed'));
-      let keyPair = nacl.sign.keyPair.fromSeed(seedBuffer.slice(0, 32));
-      const wallet = WalletContractV5R1.create({ 
-        workchain: 0, 
-        publicKey: keyPair.publicKey 
-      });
+      const mnemonicArray = this.normalizeMnemonic(mnemonicPhrase)
+      const seedBuffer = (await mnemonicToSeed(mnemonicArray, seed || 'TON default seed'))
+      const keyPair = nacl.sign.keyPair.fromSeed(seedBuffer.slice(0, 32))
+      const wallet = WalletContractV5R1.create({
+        workchain: 0,
+        publicKey: keyPair.publicKey
+      })
 
       return {
         mnemonic: mnemonicPhrase,
         keyPair,
         publicKey: Buffer.from(keyPair.publicKey),
         secretKey: Buffer.from(keyPair.secretKey),
-        address: wallet.address.toString({bounceable: false})
-      };
+        address: wallet.address.toString({ bounceable: false })
+      }
     } catch (error) {
-      console.error("Error getting wallet details:", error);
-      return null;
+      console.error('Error getting wallet details:', error)
+      return null
     }
   }
 
@@ -154,14 +154,14 @@ export class WDKWalletManagementTON {
    * @returns {KeyPair} The generated key pair
    * @throws {Error} If seed is invalid or key pair creation fails
    */
-  async createKeyPairFromSeed(seed) {
+  async createKeyPairFromSeed (seed) {
     if (!Buffer.isBuffer(seed) || seed.length !== 32) {
-      throw new Error("Seed must be a 32-byte buffer");
+      throw new Error('Seed must be a 32-byte buffer')
     }
     try {
-      return keyPairFromSeed(seed);
+      return keyPairFromSeed(seed)
     } catch (error) {
-      throw new Error("Failed to create key pair from seed: " + error.message);
+      throw new Error('Failed to create key pair from seed: ' + error.message)
     }
   }
 
@@ -171,14 +171,14 @@ export class WDKWalletManagementTON {
    * @returns {KeyPair} The generated key pair
    * @throws {Error} If secret key is invalid or key pair creation fails
    */
-  async createKeyPairFromSecretKey(secretKey) {
+  async createKeyPairFromSecretKey (secretKey) {
     if (!Buffer.isBuffer(secretKey)) {
-      throw new Error("Secret key must be a buffer");
+      throw new Error('Secret key must be a buffer')
     }
     try {
-      return keyPairFromSecretKey(secretKey);
+      return keyPairFromSecretKey(secretKey)
     } catch (error) {
-      throw new Error("Failed to create key pair from secret key: " + error.message);
+      throw new Error('Failed to create key pair from secret key: ' + error.message)
     }
   }
 
@@ -189,17 +189,17 @@ export class WDKWalletManagementTON {
    * @returns {Buffer} The signature
    * @throws {Error} If signing fails
    */
-  async signData(data, secretKey) {
+  async signData (data, secretKey) {
     if (!Buffer.isBuffer(data)) {
-      throw new Error("Data must be a buffer");
+      throw new Error('Data must be a buffer')
     }
     if (!Buffer.isBuffer(secretKey)) {
-      throw new Error("Secret key must be a buffer");
+      throw new Error('Secret key must be a buffer')
     }
     try {
-      return sign(data, secretKey);
+      return sign(data, secretKey)
     } catch (error) {
-      throw new Error("Failed to sign data: " + error.message);
+      throw new Error('Failed to sign data: ' + error.message)
     }
   }
 
@@ -211,20 +211,20 @@ export class WDKWalletManagementTON {
    * @returns {boolean} Whether the signature is valid
    * @throws {Error} If verification fails
    */
-  async verifySignature(data, signature, publicKey) {
+  async verifySignature (data, signature, publicKey) {
     if (!Buffer.isBuffer(data)) {
-      throw new Error("Data must be a buffer");
+      throw new Error('Data must be a buffer')
     }
     if (!Buffer.isBuffer(signature)) {
-      throw new Error("Signature must be a buffer");
+      throw new Error('Signature must be a buffer')
     }
     if (!Buffer.isBuffer(publicKey)) {
-      throw new Error("Public key must be a buffer");
+      throw new Error('Public key must be a buffer')
     }
     try {
-      return signVerify(data, signature, publicKey);
+      return signVerify(data, signature, publicKey)
     } catch (error) {
-      throw new Error("Failed to verify signature: " + error.message);
+      throw new Error('Failed to verify signature: ' + error.message)
     }
   }
 
@@ -234,16 +234,16 @@ export class WDKWalletManagementTON {
    * @param {KeyPair} keyPair - The key pair to use
    * @returns {Promise<{signature: Buffer, isValid: boolean}>} The signature and verification result
    */
-  async signAndVerify(data, keyPair) {
+  async signAndVerify (data, keyPair) {
     if (!Buffer.isBuffer(data)) {
-      throw new Error("Data must be a buffer");
+      throw new Error('Data must be a buffer')
     }
     try {
-      const signature = await this.signData(data, keyPair.secretKey);
-      const isValid = await this.verifySignature(data, signature, keyPair.publicKey);
-      return { signature, isValid };
+      const signature = await this.signData(data, keyPair.secretKey)
+      const isValid = await this.verifySignature(data, signature, keyPair.publicKey)
+      return { signature, isValid }
     } catch (error) {
-      throw new Error("Failed to sign and verify data: " + error.message);
+      throw new Error('Failed to sign and verify data: ' + error.message)
     }
   }
 
@@ -253,16 +253,15 @@ export class WDKWalletManagementTON {
    * @returns {string} The seed for the given account index
    * @throws {Error} If accountIndex is negative
    */
-  getSeed(accountIndex) {
-    if (!accountIndex) accountIndex = 0;
-    
+  getSeed (accountIndex) {
+    if (!accountIndex) accountIndex = 0
+
     if (accountIndex < 0) {
-      throw new Error("Account index cannot be negative");
+      throw new Error('Account index cannot be negative')
     } else if (accountIndex === 0) {
-      return 'TON default seed';
+      return 'TON default seed'
     } else {
-      return 'TON custom seed ' + accountIndex;
+      return 'TON custom seed ' + accountIndex
     }
   }
 }
-

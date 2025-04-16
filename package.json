@@ -5,9 +5,15 @@
   "main": "index.js",
   "type": "module",
   "types": "index.d.ts",
+  "scripts": {
+    "lint": "standard --fix"
+  },
   "dependencies": {
     "@ton/crypto": "^3.3.0",
     "@ton/ton": "15.1.0",
     "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "standard": "^17.1.2"
   }
 }
