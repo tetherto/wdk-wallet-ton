@@ -75,12 +75,9 @@ export default class WalletManagerTon {
    */
   #deriveKeyPair(hdPath) {
     const seed = bip39.mnemonicToSeedSync(this.seedPhrase);
-    const { key: rawPrivateKey } = ed25519.derivePath(hdPath, seed.toString('hex'));
-    const rawPublicKey = ed25519.getPublicKey(rawPrivateKey).slice(1);
+    const { key: privateKey } = ed25519.derivePath(hdPath, seed.toString('hex'));
+    const publicKey = ed25519.getPublicKey(privateKey).slice(1);
 
-    return {
-      privateKey: rawPrivateKey,
-      publicKey: rawPublicKey
-    };
+    return { privateKey, publicKey };
   }
 }

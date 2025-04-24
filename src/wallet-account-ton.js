@@ -14,7 +14,7 @@
 'use strict'
 
 import { sign, signVerify } from '@ton/crypto'
-import { WalletContractV5R1 } from '@ton/ton'
+import { WalletContractV5R1, TonClient, internal, SendMode } from '@ton/ton'
 
 export default class WalletAccountTon {
   #path
@@ -22,19 +22,26 @@ export default class WalletAccountTon {
   #address
   #keyPair
   #config
+  #client
+  #contract
 
-  constructor ({ path, index, keyPair, config }) {
+  constructor({ path, index, keyPair, config }) {
     const contract = WalletContractV5R1.create({ workchain: 0, publicKey: keyPair.publicKey })
     const address = contract.address.toString({ urlSafe: true, bounceable: false, testOnly: false })
 
     this.#path = path
+    this.#contract = contract
     this.#index = index
     this.#address = address
     this.#keyPair = keyPair
     this.#config = config
+    this.#client = new TonClient({
+      endpoint: config.tonApiUrl,
+      apiKey: config.tonApiSecretKey
+    });
   }
 
-  async sign (message) {
+  async sign(message) {
     if (!Buffer.isBuffer(message)) throw new Error('Message must be a buffer')
     if (!Buffer.isBuffer(this.#keyPair.privateKey)) throw new Error('Secret key must be a buffer')
 
@@ -45,7 +52,7 @@ export default class WalletAccountTon {
     }
   }
 
-  async verify (message, signature) {
+  async verify(message, signature) {
     if (!Buffer.isBuffer(message)) throw new Error('Message must be a buffer')
     if (!Buffer.isBuffer(signature)) throw new Error('Signature must be a buffer')
 
@@ -56,7 +63,24 @@ export default class WalletAccountTon {
     }
   }
 
-  async sendTransaction () {
-    throw Error('Method not implemented')
+  async sendTransaction({ to, value }) {
+    const openContract = this.#client.open(this.#contract);
+    const seqno = await openContract.getSeqno();
+    const message = internal({ to, value: value.toString(), body: 'Transfer' });
+    const transfer = openContract.createTransfer({
+      secretKey: this.#keyPair.privateKey,
+      seqno,
+      sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+      messages: [message],
+    });
+
+    const messageHash = transfer.hash().toString('hex');
+
+    await openContract.send(transfer);
+
+    console.log(`Transaction of ${amountInTon} TON sent to ${toAddress}`);
+    console.log(`Transaction hash: ${messageHash}`);
+
+    return messageHash;
   }
 }
