@@ -15,9 +15,15 @@
 
 import * as bip39 from 'bip39'
 import WalletAccountTon from './wallet-account-ton.js'
+import nacl from 'tweetnacl'
 import * as ed25519 from 'ed25519-hd-key'
 
+const BIP_44_TON_DERIVATION_PATH_BASE = "m/44'/607'/" // TBD long or short format...
+
 export default class WalletManagerTon {
+  #seedPhrase
+  #config
+
   /**
    * Creates a new WalletManagerTon instance.
    *
@@ -26,13 +32,17 @@ export default class WalletManagerTon {
    * @param {string} [config.tonApiUrl] - The TON API’s URL.
    * @param {string} [config.tonApiSecretKey] - The API key to use to authenticate on the TON API.
    */
-  constructor(seedPhrase, config = {}) {
+  constructor (seedPhrase, config = {}) {
     if (!WalletManagerTon.isValidSeedPhrase(seedPhrase)) {
-      throw new Error('Invalid seed phrase');
+      throw new Error('Invalid seed phrase')
     }
 
-    this.seedPhrase = seedPhrase;
-    this.config = config;
+    this.#seedPhrase = seedPhrase
+    this.#config = config
+  }
+
+  get seedPhrase () {
+    return this.#seedPhrase
   }
 
   /**
@@ -40,8 +50,8 @@ export default class WalletManagerTon {
    *
    * @returns {string} The seed phrase.
    */
-  static getRandomSeedPhrase() {
-    return bip39.generateMnemonic();
+  static getRandomSeedPhrase () {
+    return bip39.generateMnemonic()
   }
 
   /**
@@ -50,8 +60,8 @@ export default class WalletManagerTon {
    * @param {string} seedPhrase - The seed phrase.
    * @returns {boolean} True if the seed phrase is valid.
    */
-  static isValidSeedPhrase(seedPhrase) {
-    return bip39.validateMnemonic(seedPhrase);
+  static isValidSeedPhrase (seedPhrase) {
+    return bip39.validateMnemonic(seedPhrase)
   }
 
   /**
@@ -60,10 +70,10 @@ export default class WalletManagerTon {
    * @param {number} index - The account index to retrieve.
    * @returns {WalletAccountTon} The wallet account for the specified index.
    */
-  getAccount(index) {
-    const path = `m/44'/607'/${index}'`;
-    const keyPair = this.#deriveKeyPair(path);
-    return new WalletAccountTon({ path, index, keyPair, config: this.config });
+  getAccount (index) {
+    const path = BIP_44_TON_DERIVATION_PATH_BASE + `${index}'`
+    const keyPair = this.#deriveKeyPair(path)
+    return new WalletAccountTon({ path, index, keyPair, config: this.#config })
   }
 
   /**
@@ -73,11 +83,11 @@ export default class WalletManagerTon {
    * @param {string} hdPath - The hierarchical deterministic path.
    * @returns {{ privateKey: Buffer, publicKey: Buffer }} The derived key pair.
    */
-  #deriveKeyPair(hdPath) {
-    const seed = bip39.mnemonicToSeedSync(this.seedPhrase);
-    const { key: privateKey } = ed25519.derivePath(hdPath, seed.toString('hex'));
-    const publicKey = ed25519.getPublicKey(privateKey).slice(1);
+  #deriveKeyPair (hdPath) {
+    const seed = bip39.mnemonicToSeedSync(this.#seedPhrase)
+    const { key: privateKey } = ed25519.derivePath(hdPath, seed.toString('hex'))
+    const keyPair = nacl.sign.keyPair.fromSeed(privateKey)
 
-    return { privateKey, publicKey };
+    return { privateKey: keyPair.secretKey, publicKey: keyPair.publicKey }
   }
 }

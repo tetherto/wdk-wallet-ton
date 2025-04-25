@@ -13,35 +13,54 @@
 // limitations under the License.
 'use strict'
 
+import { TonApiClient } from '@ton-api/client'
 import { sign, signVerify } from '@ton/crypto'
-import { WalletContractV5R1, TonClient, internal, SendMode } from '@ton/ton'
+import { Address, WalletContractV5R1, internal, SendMode } from '@ton/ton'
+import { ContractAdapter } from '@ton-api/ton-adapter'
+import { beginCell } from '@ton/core'
 
 export default class WalletAccountTon {
   #path
   #index
   #address
   #keyPair
-  #config
   #client
-  #contract
+  #wallet
+  #contractAdapter
 
-  constructor({ path, index, keyPair, config }) {
-    const contract = WalletContractV5R1.create({ workchain: 0, publicKey: keyPair.publicKey })
-    const address = contract.address.toString({ urlSafe: true, bounceable: false, testOnly: false })
+  constructor ({ path, index, keyPair, config }) {
+    const wallet = WalletContractV5R1.create({ workchain: 0, publicKey: keyPair.publicKey })
+    const address = wallet.address.toString({ urlSafe: true, bounceable: false, testOnly: false })
 
     this.#path = path
-    this.#contract = contract
+    this.#wallet = wallet
     this.#index = index
     this.#address = address
     this.#keyPair = keyPair
-    this.#config = config
-    this.#client = new TonClient({
-      endpoint: config.tonApiUrl,
+    this.#client = new TonApiClient({
+      baseUrl: config.tonApiUrl,
       apiKey: config.tonApiSecretKey
-    });
+    })
+    this.#contractAdapter = new ContractAdapter(this.#client)
   }
 
-  async sign(message) {
+  get path () {
+    return this.#path
+  }
+
+  get index () {
+    return this.#index
+  }
+
+  get address () {
+    return this.#address
+  }
+
+  get keyPair () {
+    return this.#keyPair
+  }
+
+  async sign (message) {
     if (!Buffer.isBuffer(message)) throw new Error('Message must be a buffer')
     if (!Buffer.isBuffer(this.#keyPair.privateKey)) throw new Error('Secret key must be a buffer')
 
@@ -52,7 +71,7 @@ export default class WalletAccountTon {
     }
   }
 
-  async verify(message, signature) {
+  async verify (message, signature) {
     if (!Buffer.isBuffer(message)) throw new Error('Message must be a buffer')
     if (!Buffer.isBuffer(signature)) throw new Error('Signature must be a buffer')
 
@@ -63,24 +82,47 @@ export default class WalletAccountTon {
     }
   }
 
-  async sendTransaction({ to, value }) {
-    const openContract = this.#client.open(this.#contract);
-    const seqno = await openContract.getSeqno();
-    const message = internal({ to, value: value.toString(), body: 'Transfer' });
+  async sendTransaction (to, value, data = {}) {
+    const openContract = this.#contractAdapter.open(this.#wallet)
+    const seqno = await openContract.getSeqno()
+    const recipient = Address.parseFriendly(to)
+    const message = internal({
+      to: recipient.address,
+      value: value.toString(),
+      body: 'Transfer',
+      bounce: recipient.isBounceable,
+      ...data
+    })
+
     const transfer = openContract.createTransfer({
       secretKey: this.#keyPair.privateKey,
       seqno,
       sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
-      messages: [message],
-    });
+      messages: [message]
+    })
 
-    const messageHash = transfer.hash().toString('hex');
+    const internalMessageHash = this.#normalizeHash(message).toString('hex')
 
-    await openContract.send(transfer);
+    await openContract.send(transfer)
 
-    console.log(`Transaction of ${amountInTon} TON sent to ${toAddress}`);
-    console.log(`Transaction hash: ${messageHash}`);
+    return internalMessageHash
+  }
 
-    return messageHash;
+  #normalizeHash (message) {
+    if (message.info.type !== 'external-in') {
+      return message.body.hash()
+    }
+
+    const cell = beginCell()
+      .storeUint(2, 2) // external-in
+      .storeUint(0, 2) // addr_none
+      .storeAddress(message.info.dest)
+      .storeUint(0, 4) // import_fee = 0
+      .storeBit(false) // no StateInit
+      .storeBit(true) // store body as reference
+      .storeRef(message.body)
+      .endCell()
+
+    return cell.hash()
   }
 }
