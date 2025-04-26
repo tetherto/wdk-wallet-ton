@@ -24,7 +24,7 @@ export default class WalletAccountTon {
   #index
   #address
   #keyPair
-  
+
   #wallet
   #contractAdapter
 
@@ -54,7 +54,7 @@ export default class WalletAccountTon {
 
   /**
    * The derivation path's index of this account.
-   * 
+   *
    * @type {number}
    */
   get index () {
@@ -63,7 +63,7 @@ export default class WalletAccountTon {
 
   /**
    * The derivation path of this account (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
-   * 
+   *
    * @type {number}
    */
   get path () {
@@ -72,7 +72,7 @@ export default class WalletAccountTon {
 
   /**
    * The account's address.
-   * 
+   *
    * @type {string}
    */
   get address () {
@@ -87,7 +87,7 @@ export default class WalletAccountTon {
 
   /**
    * The account's key pair.
-   * 
+   *
    * @type {KeyPair}
    */
   get keyPair () {
@@ -99,7 +99,7 @@ export default class WalletAccountTon {
 
   /**
    * Signs a message.
-   * 
+   *
    * @param {string} message - The message to sign.
    * @returns {Promise<string>} The message's signature.
    */
@@ -107,19 +107,19 @@ export default class WalletAccountTon {
     const _message = Buffer.from(message)
 
     return sign(_message, this.#keyPair.privateKey)
-             .toString('hex')
+      .toString('hex')
   }
 
   /**
    * Verifies a message's signature.
-   * 
+   *
    * @param {string} message - The original message.
    * @param {string} signature - The signature to verify.
    * @returns {Promise<boolean>} True if the signature is valid.
    */
   async verify (message, signature) {
-    const _message = Buffer.from(message),
-          _signature = Buffer.from(signature, 'hex')
+    const _message = Buffer.from(message)
+    const _signature = Buffer.from(signature, 'hex')
 
     return signVerify(_message, _signature, this.#keyPair.publicKey)
   }
@@ -130,10 +130,10 @@ export default class WalletAccountTon {
    * @property {number} value - The amount of native tokens to send to the recipient.
    * @property {string} [data] - The transaction's data in hex format.
    */
-  
+
   /**
    * Sends a transaction with arbitrary data.
-   * 
+   *
    * @param {Transaction} tx - The transaction to send.
    * @returns {Promise<string>} The transaction's hash.
    */

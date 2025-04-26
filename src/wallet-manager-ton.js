@@ -67,7 +67,7 @@ export default class WalletManagerTon {
 
   /**
   * The seed phrase of the wallet.
-  * 
+  *
   * @type {string}
   */
   get seedPhrase () {
@@ -93,7 +93,7 @@ export default class WalletManagerTon {
     const seed = bip39.mnemonicToSeedSync(this.#seedPhrase)
 
     const { privateKey } = bip32.fromSeed(seed)
-                                .derivePath(hdPath)
+      .derivePath(hdPath)
 
     const keyPair = nacl.sign.keyPair.fromSeed(privateKey)
 
