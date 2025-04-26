@@ -18,35 +18,32 @@ import WalletAccountTon from './wallet-account-ton.js'
 import nacl from 'tweetnacl'
 import * as ed25519 from 'ed25519-hd-key'
 
-const BIP_44_TON_DERIVATION_PATH_BASE = "m/44'/607'/" // TBD long or short format...
+const BIP_44_TON_DERIVATION_PATH_BASE = "m/44'/607'/"
 
 export default class WalletManagerTon {
   #seedPhrase
   #config
 
   /**
-   * Creates a new WalletManagerTon instance.
+   * Creates a new wallet manager for the ton blockchain.
    *
-   * @param {string} seedPhrase - The wallet’s BIP-39 seed phrase.
-   * @param {Object} [config={}] - The configuration object.
-   * @param {string} [config.tonApiUrl] - The TON API’s URL.
-   * @param {string} [config.tonApiSecretKey] - The API key to use to authenticate on the TON API.
+   * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+   * @param {Object} [config] - The configuration object.
+   * @param {string} [config.tonApiUrl] - The ton api's url.
+   * @param {string} [config.tonApiSecretKey] - The api-key to use to authenticate on the ton api.
    */
   constructor (seedPhrase, config = {}) {
     if (!WalletManagerTon.isValidSeedPhrase(seedPhrase)) {
-      throw new Error('Invalid seed phrase')
+      throw new Error('Seed phrase is invalid.')
     }
 
     this.#seedPhrase = seedPhrase
+
     this.#config = config
   }
 
-  get seedPhrase () {
-    return this.#seedPhrase
-  }
-
   /**
-   * Returns a random BIP-39 seed phrase.
+   * Returns a random [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
    *
    * @returns {string} The seed phrase.
    */
@@ -65,24 +62,29 @@ export default class WalletManagerTon {
   }
 
   /**
-   * Gets a wallet account for the specified index.
+  * The seed phrase of the wallet.
+  * 
+  * @type {string}
+  */
+  get seedPhrase () {
+    return this.#seedPhrase
+  }
+
+  /**
+   * Returns the wallet account at a specific index (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
    *
-   * @param {number} index - The account index to retrieve.
-   * @returns {WalletAccountTon} The wallet account for the specified index.
+   * @example
+   * // Returns the account with derivation path m/44'/607'/0'/0/1
+   * const account = wallet.getAccount(1);
+   * @param {number} index - The index of the account to get (default: 0).
+   * @returns {WalletAccountTon} The account.
    */
-  getAccount (index) {
+  getAccount (index = 0) {
     const path = BIP_44_TON_DERIVATION_PATH_BASE + `${index}'`
     const keyPair = this.#deriveKeyPair(path)
     return new WalletAccountTon({ path, index, keyPair, config: this.#config })
   }
 
-  /**
-   * Derives a key pair from the seed phrase using the specified HD path.
-   *
-   * @private
-   * @param {string} hdPath - The hierarchical deterministic path.
-   * @returns {{ privateKey: Buffer, publicKey: Buffer }} The derived key pair.
-   */
   #deriveKeyPair (hdPath) {
     const seed = bip39.mnemonicToSeedSync(this.#seedPhrase)
     const { key: privateKey } = ed25519.derivePath(hdPath, seed.toString('hex'))

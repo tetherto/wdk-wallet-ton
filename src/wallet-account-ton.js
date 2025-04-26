@@ -44,22 +44,54 @@ export default class WalletAccountTon {
     this.#contractAdapter = new ContractAdapter(this.#client)
   }
 
-  get path () {
-    return this.#path
-  }
-
+  /**
+   * The derivation path's index of this account.
+   * 
+   * @type {number}
+   */
   get index () {
     return this.#index
   }
 
+  /**
+   * The derivation path of this account (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
+   * 
+   * @type {number}
+   */
+  get path () {
+    return this.#path
+  }
+
+  /**
+   * The account's address.
+   * 
+   * @type {string}
+   */
   get address () {
     return this.#address
   }
 
+  /**
+   * @typedef {Object} KeyPair
+   * @property {string} publicKey - The public key.
+   * @property {string} privateKey - The private key.
+   */
+
+  /**
+   * The account's key pair.
+   * 
+   * @type {KeyPair}
+   */
   get keyPair () {
     return this.#keyPair
   }
 
+  /**
+   * Signs a message.
+   * 
+   * @param {string} message - The message to sign.
+   * @returns {Promise<string>} The message's signature.
+   */
   async sign (message) {
     if (!Buffer.isBuffer(message)) throw new Error('Message must be a buffer')
     if (!Buffer.isBuffer(this.#keyPair.privateKey)) throw new Error('Secret key must be a buffer')
@@ -71,6 +103,13 @@ export default class WalletAccountTon {
     }
   }
 
+  /**
+   * Verifies a message's signature.
+   * 
+   * @param {string} message - The original message.
+   * @param {string} signature - The signature to verify.
+   * @returns {Promise<boolean>} True if the signature is valid.
+   */
   async verify (message, signature) {
     if (!Buffer.isBuffer(message)) throw new Error('Message must be a buffer')
     if (!Buffer.isBuffer(signature)) throw new Error('Signature must be a buffer')
@@ -82,7 +121,20 @@ export default class WalletAccountTon {
     }
   }
 
-  async sendTransaction (to, value, data = {}) {
+  /**
+   * @typedef {Object} Transaction
+   * @property {string} to - The transaction's recipient.
+   * @property {number} value - The amount of native tokens to send to the recipient.
+   * @property {string} [data] - The transaction's data in hex format.
+   */
+  
+  /**
+   * Sends a transaction with arbitrary data.
+   * 
+   * @param {Transaction} tx - The transaction to send.
+   * @returns {Promise<string>} The transaction's hash.
+   */
+  async sendTransaction (to, value) {
     const openContract = this.#contractAdapter.open(this.#wallet)
     const seqno = await openContract.getSeqno()
     const recipient = Address.parseFriendly(to)
@@ -90,8 +142,7 @@ export default class WalletAccountTon {
       to: recipient.address,
       value: value.toString(),
       body: 'Transfer',
-      bounce: recipient.isBounceable,
-      ...data
+      bounce: recipient.isBounceable
     })
 
     const transfer = openContract.createTransfer({
@@ -114,12 +165,12 @@ export default class WalletAccountTon {
     }
 
     const cell = beginCell()
-      .storeUint(2, 2) // external-in
-      .storeUint(0, 2) // addr_none
+      .storeUint(2, 2)
+      .storeUint(0, 2)
       .storeAddress(message.info.dest)
-      .storeUint(0, 4) // import_fee = 0
-      .storeBit(false) // no StateInit
-      .storeBit(true) // store body as reference
+      .storeUint(0, 4)
+      .storeBit(false)
+      .storeBit(true)
       .storeRef(message.body)
       .endCell()
 
