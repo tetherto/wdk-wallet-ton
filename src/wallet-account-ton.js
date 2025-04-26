@@ -83,7 +83,10 @@ export default class WalletAccountTon {
    * @type {KeyPair}
    */
   get keyPair () {
-    return this.#keyPair
+    return {
+      publicKey: Buffer.from(this.#keyPair.publicKey).toString('hex'),
+      privateKey: Buffer.from(this.#keyPair.privateKey).toString('hex')
+    }
   }
 
   /**
@@ -93,14 +96,10 @@ export default class WalletAccountTon {
    * @returns {Promise<string>} The message's signature.
    */
   async sign (message) {
-    if (!Buffer.isBuffer(message)) throw new Error('Message must be a buffer')
-    if (!Buffer.isBuffer(this.#keyPair.privateKey)) throw new Error('Secret key must be a buffer')
+    const _message = Buffer.from(message)
 
-    try {
-      return sign(message, this.#keyPair.privateKey)
-    } catch (error) {
-      throw new Error('Failed to sign message: ' + error.message)
-    }
+    return sign(_message, this.#keyPair.privateKey)
+             .toString('hex')
   }
 
   /**
@@ -111,14 +110,10 @@ export default class WalletAccountTon {
    * @returns {Promise<boolean>} True if the signature is valid.
    */
   async verify (message, signature) {
-    if (!Buffer.isBuffer(message)) throw new Error('Message must be a buffer')
-    if (!Buffer.isBuffer(signature)) throw new Error('Signature must be a buffer')
+    const _message = Buffer.from(message),
+          _signature = Buffer.from(signature, 'hex')
 
-    try {
-      return signVerify(message, signature, this.#keyPair.publicKey)
-    } catch (error) {
-      throw new Error('Failed to verify signature: ' + error.message)
-    }
+    return signVerify(_message, _signature, this.#keyPair.publicKey)
   }
 
   /**
