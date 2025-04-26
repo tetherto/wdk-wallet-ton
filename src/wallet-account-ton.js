@@ -13,35 +13,43 @@
 // limitations under the License.
 'use strict'
 
-import { TonApiClient } from '@ton-api/client'
+import { beginCell } from '@ton/core'
 import { sign, signVerify } from '@ton/crypto'
 import { Address, WalletContractV5R1, internal, SendMode } from '@ton/ton'
+import { TonApiClient } from '@ton-api/client'
 import { ContractAdapter } from '@ton-api/ton-adapter'
-import { beginCell } from '@ton/core'
 
 export default class WalletAccountTon {
   #path
   #index
   #address
   #keyPair
-  #client
+  
   #wallet
   #contractAdapter
 
   constructor ({ path, index, keyPair, config }) {
     const wallet = WalletContractV5R1.create({ workchain: 0, publicKey: keyPair.publicKey })
+
     const address = wallet.address.toString({ urlSafe: true, bounceable: false, testOnly: false })
 
     this.#path = path
-    this.#wallet = wallet
     this.#index = index
     this.#address = address
     this.#keyPair = keyPair
-    this.#client = new TonApiClient({
-      baseUrl: config.tonApiUrl,
-      apiKey: config.tonApiSecretKey
-    })
-    this.#contractAdapter = new ContractAdapter(this.#client)
+
+    this.#wallet = wallet
+
+    const { tonApiUrl, tonApiSecretKey } = config
+
+    if (tonApiUrl && tonApiSecretKey) {
+      const client = new TonApiClient({
+        baseUrl: tonApiUrl,
+        apiKey: tonApiSecretKey
+      })
+
+      this.#contractAdapter = new ContractAdapter(client)
+    }
   }
 
   /**
@@ -130,28 +138,33 @@ export default class WalletAccountTon {
    * @returns {Promise<string>} The transaction's hash.
    */
   async sendTransaction (to, value) {
-    const openContract = this.#contractAdapter.open(this.#wallet)
-    const seqno = await openContract.getSeqno()
-    const recipient = Address.parseFriendly(to)
+    if (!this.#contractAdapter) {
+      throw new Error('The wallet must be connected to the ton api to send transactions.')
+    }
+
+    const _to = Address.parseFriendly(to)
+
+    const contract = this.#contractAdapter.open(this.#wallet)
+
     const message = internal({
-      to: recipient.address,
+      to: _to.address,
       value: value.toString(),
       body: 'Transfer',
-      bounce: recipient.isBounceable
+      bounce: _to.isBounceable
     })
 
-    const transfer = openContract.createTransfer({
+    const transfer = contract.createTransfer({
       secretKey: this.#keyPair.privateKey,
-      seqno,
+      seqno: await contract.getSeqno(),
       sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
       messages: [message]
     })
 
-    const internalMessageHash = this.#normalizeHash(message).toString('hex')
+    await contract.send(transfer)
 
-    await openContract.send(transfer)
+    const hash = this.#normalizeHash(message).toString('hex')
 
-    return internalMessageHash
+    return hash
   }
 
   #normalizeHash (message) {
