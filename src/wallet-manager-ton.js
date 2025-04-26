@@ -13,12 +13,16 @@
 // limitations under the License.
 'use strict'
 
-import * as bip39 from 'bip39'
-import WalletAccountTon from './wallet-account-ton.js'
+import { BIP32Factory } from 'bip32'
+import * as ecc from 'tiny-secp256k1'
+import bip39 from 'bip39'
 import nacl from 'tweetnacl'
-import * as ed25519 from 'ed25519-hd-key'
 
-const BIP_44_TON_DERIVATION_PATH_BASE = "m/44'/607'/"
+import WalletAccountTon from './wallet-account-ton.js'
+
+const bip32 = BIP32Factory(ecc)
+
+const BIP_44_TON_DERIVATION_PATH_BASE = 'm/44\'/607\'/0\'/0'
 
 export default class WalletManagerTon {
   #seedPhrase
@@ -80,14 +84,17 @@ export default class WalletManagerTon {
    * @returns {WalletAccountTon} The account.
    */
   getAccount (index = 0) {
-    const path = BIP_44_TON_DERIVATION_PATH_BASE + `${index}'`
+    const path = `${BIP_44_TON_DERIVATION_PATH_BASE}/${index}`
     const keyPair = this.#deriveKeyPair(path)
     return new WalletAccountTon({ path, index, keyPair, config: this.#config })
   }
 
   #deriveKeyPair (hdPath) {
     const seed = bip39.mnemonicToSeedSync(this.#seedPhrase)
-    const { key: privateKey } = ed25519.derivePath(hdPath, seed.toString('hex'))
+
+    const { privateKey } = bip32.fromSeed(seed)
+                                .derivePath(hdPath)
+
     const keyPair = nacl.sign.keyPair.fromSeed(privateKey)
 
     return { privateKey: keyPair.secretKey, publicKey: keyPair.publicKey }
