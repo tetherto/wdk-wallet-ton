@@ -1,7 +1,7 @@
 {
   "name": "@wdk/wallet-ton",
-  "version": "0.1.0-beta.1",
-  "description": "Wallet management utilities for TON",
+  "version": "1.0.0-beta.1",
+  "description": "A simple package to manage BIP-32 wallets for the ton blockchain.",
   "main": "index.js",
   "type": "module",
   "scripts": {
