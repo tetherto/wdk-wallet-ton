@@ -38,6 +38,7 @@ export default class WalletAccountTon {
   #address
   #keyPair
 
+  #client
   #wallet
   #contractAdapter
 
@@ -50,18 +51,17 @@ export default class WalletAccountTon {
     this.#index = index
     this.#address = address
     this.#keyPair = keyPair
-
     this.#wallet = wallet
 
     const { tonApiUrl, tonApiSecretKey } = config
 
     if (tonApiUrl && tonApiSecretKey) {
-      const client = new TonApiClient({
+      this.#client = new TonApiClient({
         baseUrl: tonApiUrl,
         apiKey: tonApiSecretKey
       })
 
-      this.#contractAdapter = new ContractAdapter(client)
+      this.#contractAdapter = new ContractAdapter(this.#client)
     }
   }
 
@@ -165,6 +165,56 @@ export default class WalletAccountTon {
     const hash = this.#normalizeHash(message).toString('hex')
 
     return hash
+  }
+
+  /**
+   * Returns the account's native token balance.
+   *
+   * @returns {Promise<BigInt>} The native token balance.
+   */
+  async getBalance () {
+    if (!this.#contractAdapter) {
+      throw new Error('The wallet must be connected to the ton api.')
+    }
+
+    const contract = this.#contractAdapter.open(this.#wallet)
+
+    const balance = await contract.getBalance()
+
+    return balance
+  }
+
+  /**
+   * Returns the balance of the account for a specific token.
+   *
+   * @param {string} tokenAddress - The smart contract address of the token.
+   * @returns {Promise<BigInt>} The token balance.
+   */
+  async getTokenBalance (tokenAddress) {
+    const jettonAddress = await this.#getJettonWalletAddress(tokenAddress)
+
+    const balanceResponse = await this.#client.blockchain.execGetMethodForBlockchainAccount(
+      jettonAddress,
+      'get_wallet_data'
+    )
+
+    if (balanceResponse.error) {
+      return BigInt(0)
+    }
+
+    return BigInt(balanceResponse.decoded.balance)
+  }
+
+  async #getJettonWalletAddress (tokenAddress) {
+    const jettonAddress = Address.parse(tokenAddress)
+
+    const response = await this.#client.blockchain.execGetMethodForBlockchainAccount(
+      jettonAddress,
+      'get_wallet_address',
+      { args: [this.#address] }
+    )
+
+    return Address.parse(response.decoded.jetton_wallet_address)
   }
 
   #normalizeHash (message) {
