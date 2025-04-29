@@ -137,7 +137,7 @@ export default class WalletAccountTon {
    * @param {Transaction} tx - The transaction to send.
    * @returns {Promise<string>} The transaction's hash.
    */
-  async sendTransaction (to, value) {
+  async sendTransaction ({ to, value, bounceable }) {
     if (!this.#contractAdapter) {
       throw new Error('The wallet must be connected to the ton api to send transactions.')
     }
@@ -150,7 +150,7 @@ export default class WalletAccountTon {
       to: _to.address,
       value: value.toString(),
       body: 'Transfer',
-      bounce: _to.isBounceable
+      bounce: bounceable || _to.isBounceable
     })
 
     const transfer = contract.createTransfer({
@@ -181,7 +181,7 @@ export default class WalletAccountTon {
 
     const balance = await contract.getBalance()
 
-    return balance
+    return Number(balance)
   }
 
   /**
@@ -202,7 +202,7 @@ export default class WalletAccountTon {
       return BigInt(0)
     }
 
-    return BigInt(balanceResponse.decoded.balance)
+    return Number(balanceResponse.decoded.balance)
   }
 
   async #getJettonWalletAddress (tokenAddress) {
