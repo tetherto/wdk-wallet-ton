@@ -84,15 +84,6 @@ export default class WalletAccountTon {
   }
 
   /**
-   * The account's address.
-   *
-   * @type {string}
-   */
-  get address () {
-    return this.#address
-  }
-
-  /**
    * The account's key pair.
    *
    * @type {KeyPair}
@@ -102,6 +93,15 @@ export default class WalletAccountTon {
       publicKey: Buffer.from(this.#keyPair.publicKey).toString('hex'),
       privateKey: Buffer.from(this.#keyPair.privateKey).toString('hex')
     }
+  }
+
+  /**
+   * Returns the account's address.
+   * 
+   * @returns {Promise<string>} The account's address.
+   */
+  async getAddress() {
+    return this.#address
   }
 
   /**

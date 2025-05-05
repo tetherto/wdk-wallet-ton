@@ -37,9 +37,9 @@ export default class WalletManagerTon {
      * // Returns the account with derivation path m/44'/607'/0'/0/1
      * const account = wallet.getAccount(1);
      * @param {number} index - The index of the account to get (default: 0).
-     * @returns {Promise<WalletAccountTon>} The account.
+     * @returns {WalletAccountTon} The account.
      */
-    getAccount(index?: number): Promise<WalletAccountTon>;
+    getAccount(index?: number): WalletAccountTon;
     #private;
 }
 import WalletAccountTon from './wallet-account-ton.js';
