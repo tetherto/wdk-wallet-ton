@@ -81,9 +81,9 @@ export default class WalletManagerTon {
    * // Returns the account with derivation path m/44'/607'/0'/0/1
    * const account = wallet.getAccount(1);
    * @param {number} index - The index of the account to get (default: 0).
-   * @returns {WalletAccountTon} The account.
+   * @returns {Promise<WalletAccountTon>} The account.
    */
-  getAccount (index = 0) {
+  async getAccount (index = 0) {
     const path = `${BIP_44_TON_DERIVATION_PATH_BASE}/${index}`
     const keyPair = this.#deriveKeyPair(path)
     return new WalletAccountTon({ path, index, keyPair, config: this.#config })
