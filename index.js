@@ -13,8 +13,8 @@
 // limitations under the License.
 'use strict'
 
+/** @typedef {import('./src/wallet-account-ton.js').default} WalletAccountTon */
 /** @typedef {import('./src/wallet-account-ton.js').KeyPair} KeyPair */
-
 /** @typedef {import('./src/wallet-account-ton.js').TonTransaction} TonTransaction */
 
 export { default } from './src/wallet-manager-ton.js'
