@@ -13,7 +13,7 @@
 // limitations under the License.
 'use strict'
 
-import { beginCell } from '@ton/core'
+import { beginCell, fromNano } from '@ton/core'
 import { sign, signVerify } from '@ton/crypto'
 import { Address, WalletContractV5R1, internal, SendMode } from '@ton/ton'
 import { TonApiClient } from '@ton-api/client'
@@ -131,7 +131,7 @@ export default class WalletAccountTon {
     return signVerify(_message, _signature, this.#keyPair.publicKey)
   }
 
-  /** 
+  /**
    * Sends a transaction with arbitrary data.
    *
    * @param {TonTransaction} tx - The transaction to send.
@@ -148,7 +148,7 @@ export default class WalletAccountTon {
 
     const message = internal({
       to: _to.address,
-      value: value.toString(),
+      value: fromNano(value).toString(),
       body: 'Transfer',
       bounce: bounceable ?? _to.isBounceable
     })
