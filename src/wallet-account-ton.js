@@ -25,6 +25,13 @@ import { ContractAdapter } from '@ton-api/ton-adapter'
  * @property {string} privateKey - The private key.
  */
 
+/**
+ * @typedef {Object} TonTransaction
+ * @property {string} to - The transaction's recipient.
+ * @property {number} value - The amount of tons to send to the recipient (in nanotons).
+ * @property {boolean} [bounceable] - If set, overrides the bounceability of the transaction.
+ */
+
 export default class WalletAccountTon {
   #path
   #index
@@ -124,17 +131,10 @@ export default class WalletAccountTon {
     return signVerify(_message, _signature, this.#keyPair.publicKey)
   }
 
-  /**
-   * @typedef {Object} Transaction
-   * @property {string} to - The transaction's recipient.
-   * @property {number} value - The amount of native tokens to send to the recipient.
-   * @property {boolean} [bounceable] - A parameter to override the bounceability of the transaction.
-   */
-
   /** 
    * Sends a transaction with arbitrary data.
    *
-   * @param {Transaction} tx - The transaction to send.
+   * @param {TonTransaction} tx - The transaction to send.
    * @returns {Promise<string>} The transaction's hash.
    */
   async sendTransaction ({ to, value, bounceable }) {

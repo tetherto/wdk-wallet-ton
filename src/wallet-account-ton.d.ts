@@ -4,10 +4,10 @@
  * @property {string} privateKey - The private key.
  */
 /**
- * @typedef {Object} Transaction
+ * @typedef {Object} TonTransaction
  * @property {string} to - The transaction's recipient.
- * @property {number} value - The amount of native tokens to send to the recipient.
- * @property {string} [data] - The transaction's data in hex format.
+ * @property {number} value - The amount of tons to send to the recipient (in nanotons).
+ * @property {boolean} [bounceable] - If set, overrides the bounceability of the transaction.
  */
 export default class WalletAccountTon {
     constructor({ path, index, keyPair, config }: {
@@ -58,10 +58,23 @@ export default class WalletAccountTon {
     /**
      * Sends a transaction with arbitrary data.
      *
-     * @param {Transaction} tx - The transaction to send.
+     * @param {TonTransaction} tx - The transaction to send.
      * @returns {Promise<string>} The transaction's hash.
      */
-    sendTransaction(to: any, value: any): Promise<string>;
+    sendTransaction({ to, value, bounceable }: TonTransaction): Promise<string>;
+    /**
+     * Returns the account's native token balance.
+     *
+     * @returns {Promise<number>} The native token balance.
+     */
+    getBalance(): Promise<number>;
+    /**
+     * Returns the balance of the account for a specific token.
+     *
+     * @param {string} tokenAddress - The smart contract address of the token.
+     * @returns {Promise<number>} The token balance.
+     */
+    getTokenBalance(tokenAddress: string): Promise<number>;
     #private;
 }
 export type KeyPair = {
@@ -74,17 +87,17 @@ export type KeyPair = {
      */
     privateKey: string;
 };
-export type Transaction = {
+export type TonTransaction = {
     /**
      * - The transaction's recipient.
      */
     to: string;
     /**
-     * - The amount of native tokens to send to the recipient.
+     * - The amount of tons to send to the recipient (in nanotons).
      */
     value: number;
     /**
-     * - The transaction's data in hex format.
+     * - If set, overrides the bounceability of the transaction.
      */
-    data?: string;
+    bounceable?: boolean;
 };

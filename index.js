@@ -15,6 +15,6 @@
 
 /** @typedef {import('./src/wallet-account-ton.js').KeyPair} KeyPair */
 
-/** @typedef {import('./src/wallet-account-ton.js').Transaction} Transaction */
+/** @typedef {import('./src/wallet-account-ton.js').TonTransaction} TonTransaction */
 
 export { default } from './src/wallet-manager-ton.js'
