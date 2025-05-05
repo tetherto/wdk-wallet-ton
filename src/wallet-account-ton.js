@@ -19,6 +19,19 @@ import { Address, WalletContractV5R1, internal, SendMode } from '@ton/ton'
 import { TonApiClient } from '@ton-api/client'
 import { ContractAdapter } from '@ton-api/ton-adapter'
 
+/**
+ * @typedef {Object} KeyPair
+ * @property {string} publicKey - The public key.
+ * @property {string} privateKey - The private key.
+ */
+
+/**
+ * @typedef {Object} Transaction
+ * @property {string} to - The transaction's recipient.
+ * @property {number} value - The amount of native tokens to send to the recipient.
+ * @property {string} [data] - The transaction's data in hex format.
+ */
+
 export default class WalletAccountTon {
   #path
   #index
@@ -80,12 +93,6 @@ export default class WalletAccountTon {
   }
 
   /**
-   * @typedef {Object} KeyPair
-   * @property {string} publicKey - The public key.
-   * @property {string} privateKey - The private key.
-   */
-
-  /**
    * The account's key pair.
    *
    * @type {KeyPair}
@@ -123,13 +130,6 @@ export default class WalletAccountTon {
 
     return signVerify(_message, _signature, this.#keyPair.publicKey)
   }
-
-  /**
-   * @typedef {Object} Transaction
-   * @property {string} to - The transaction's recipient.
-   * @property {number} value - The amount of native tokens to send to the recipient.
-   * @property {string} [data] - The transaction's data in hex format.
-   */
 
   /**
    * Sends a transaction with arbitrary data.
