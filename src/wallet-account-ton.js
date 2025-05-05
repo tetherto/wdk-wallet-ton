@@ -25,13 +25,6 @@ import { ContractAdapter } from '@ton-api/ton-adapter'
  * @property {string} privateKey - The private key.
  */
 
-/**
- * @typedef {Object} Transaction
- * @property {string} to - The transaction's recipient.
- * @property {number} value - The amount of native tokens to send to the recipient.
- * @property {string} [data] - The transaction's data in hex format.
- */
-
 export default class WalletAccountTon {
   #path
   #index
@@ -132,6 +125,13 @@ export default class WalletAccountTon {
   }
 
   /**
+   * @typedef {Object} Transaction
+   * @property {string} to - The transaction's recipient.
+   * @property {number} value - The amount of native tokens to send to the recipient.
+   * @property {boolean} [bounceable] - A parameter to override the bounceability of the transaction.
+   */
+
+  /** 
    * Sends a transaction with arbitrary data.
    *
    * @param {Transaction} tx - The transaction to send.
@@ -150,7 +150,7 @@ export default class WalletAccountTon {
       to: _to.address,
       value: value.toString(),
       body: 'Transfer',
-      bounce: bounceable || _to.isBounceable
+      bounce: bounceable ?? _to.isBounceable
     })
 
     const transfer = contract.createTransfer({
@@ -170,7 +170,7 @@ export default class WalletAccountTon {
   /**
    * Returns the account's native token balance.
    *
-   * @returns {Promise<BigInt>} The native token balance.
+   * @returns {Promise<number>} The native token balance.
    */
   async getBalance () {
     if (!this.#contractAdapter) {
@@ -188,7 +188,7 @@ export default class WalletAccountTon {
    * Returns the balance of the account for a specific token.
    *
    * @param {string} tokenAddress - The smart contract address of the token.
-   * @returns {Promise<BigInt>} The token balance.
+   * @returns {Promise<number>} The token balance.
    */
   async getTokenBalance (tokenAddress) {
     const jettonAddress = await this.#getJettonWalletAddress(tokenAddress)
@@ -197,10 +197,6 @@ export default class WalletAccountTon {
       jettonAddress,
       'get_wallet_data'
     )
-
-    if (balanceResponse.error) {
-      return BigInt(0)
-    }
 
     return Number(balanceResponse.decoded.balance)
   }
