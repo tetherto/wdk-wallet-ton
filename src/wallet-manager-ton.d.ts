@@ -1,3 +1,8 @@
+/**
+ * @typedef {Object} TonWalletConfig
+ * @property {string} [tonApiUrl] - The ton api's url.
+ * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
+ */
 export default class WalletManagerTon {
     /**
      * Returns a random [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
@@ -16,14 +21,9 @@ export default class WalletManagerTon {
      * Creates a new wallet manager for the ton blockchain.
      *
      * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
-     * @param {Object} [config] - The configuration object.
-     * @param {string} [config.tonApiUrl] - The ton api's url.
-     * @param {string} [config.tonApiSecretKey] - The api-key to use to authenticate on the ton api.
+     * @param {TonWalletConfig} [config] - The configuration object.
      */
-    constructor(seedPhrase: string, config?: {
-        tonApiUrl?: string;
-        tonApiSecretKey?: string;
-    });
+    constructor(seedPhrase: string, config?: TonWalletConfig);
     /**
     * The seed phrase of the wallet.
     *
@@ -42,4 +42,14 @@ export default class WalletManagerTon {
     getAccount(index?: number): Promise<WalletAccountTon>;
     #private;
 }
+export type TonWalletConfig = {
+    /**
+     * - The ton api's url.
+     */
+    tonApiUrl?: string;
+    /**
+     * - The api-key to use to authenticate on the ton api.
+     */
+    tonApiSecretKey?: string;
+};
 import WalletAccountTon from './wallet-account-ton.js';

@@ -24,6 +24,12 @@ const bip32 = BIP32Factory(ecc)
 
 const BIP_44_TON_DERIVATION_PATH_BASE = 'm/44\'/607\'/0\'/0'
 
+/**
+ * @typedef {Object} TonWalletConfig
+ * @property {string} [tonApiUrl] - The ton api's url.
+ * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
+ */
+
 export default class WalletManagerTon {
   #seedPhrase
   #config
@@ -32,13 +38,11 @@ export default class WalletManagerTon {
    * Creates a new wallet manager for the ton blockchain.
    *
    * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
-   * @param {Object} [config] - The configuration object.
-   * @param {string} [config.tonApiUrl] - The ton api's url.
-   * @param {string} [config.tonApiSecretKey] - The api-key to use to authenticate on the ton api.
+   * @param {TonWalletConfig} [config] - The configuration object.
    */
   constructor (seedPhrase, config = {}) {
     if (!WalletManagerTon.isValidSeedPhrase(seedPhrase)) {
-      throw new Error('Seed phrase is invalid.')
+      throw new Error('The seed phrase is invalid.')
     }
 
     this.#seedPhrase = seedPhrase
