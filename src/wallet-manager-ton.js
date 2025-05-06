@@ -14,7 +14,7 @@
 'use strict'
 
 import { BIP32Factory } from 'bip32'
-import * as ecc from 'tiny-secp256k1'
+import ecc from '@bitcoinerlab/secp256k1'
 import bip39 from 'bip39'
 import nacl from 'tweetnacl'
 
