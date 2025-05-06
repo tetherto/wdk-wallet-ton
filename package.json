@@ -10,13 +10,13 @@
     "lint:fix": "standard --fix"
   },
   "dependencies": {
+    "@bitcoinerlab/secp256k1": "^1.2.0",
     "@ton-api/client": "^0.4.0",
     "@ton-api/ton-adapter": "^0.4.0",
     "@ton/crypto": "^3.3.0",
     "@ton/ton": "^15.2.1",
     "bip32": "^5.0.0-rc.0",
     "bip39": "^3.1.0",
-    "tiny-secp256k1": "^2.2.3",
     "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
