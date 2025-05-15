@@ -22,7 +22,7 @@ import WalletAccountTon from './wallet-account-ton.js'
 
 const bip32 = BIP32Factory(ecc)
 
-const BIP_44_TON_DERIVATION_PATH_BASE = 'm/44\'/607\'/0\'/0'
+const BIP_44_TON_DERIVATION_PATH_BASE = 'm/44\'/607\''
 
 /**
  * @typedef {Object} TonWalletConfig
@@ -79,6 +79,21 @@ export default class WalletManagerTon {
   }
 
   /**
+   * Returns the wallet account at a specific BIP-44 derivation path.
+   *
+   * @param {string} path - The derivation path (e.g. “/0’/0/0”).
+   * @returns {Promise<WalletAccountTon>} The account.
+   */
+  async getAccountByPath (path) {
+    path = BIP_44_TON_DERIVATION_PATH_BASE + path
+    const segments = path.split('/')
+    const lastSegment = segments[segments.length - 1]
+    const index = parseInt(lastSegment, 10)
+    const keyPair = this.#deriveKeyPair(path)
+    return new WalletAccountTon({ path, index, keyPair, config: this.#config })
+  }
+
+  /**
    * Returns the wallet account at a specific index (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
    *
    * @example
@@ -88,9 +103,7 @@ export default class WalletManagerTon {
    * @returns {Promise<WalletAccountTon>} The account.
    */
   async getAccount (index = 0) {
-    const path = `${BIP_44_TON_DERIVATION_PATH_BASE}/${index}`
-    const keyPair = this.#deriveKeyPair(path)
-    return new WalletAccountTon({ path, index, keyPair, config: this.#config })
+    return await this.getAccountByPath(`/0'/0/${index}`)
   }
 
   #deriveKeyPair (hdPath) {
