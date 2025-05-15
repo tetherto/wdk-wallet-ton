@@ -31,6 +31,13 @@ export default class WalletManagerTon {
     */
     get seedPhrase(): string;
     /**
+     * Returns the wallet account at a specific BIP-44 derivation path.
+     *
+     * @param {string} path - The derivation path (e.g. “/0’/0/0”).
+     * @returns {Promise<WalletAccountTon>} The account.
+     */
+    getAccountByPath(path: string): Promise<WalletAccountTon>;
+    /**
      * Returns the wallet account at a specific index (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
      *
      * @example
