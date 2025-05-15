@@ -15,6 +15,8 @@
 
 import { BIP32Factory } from 'bip32'
 import ecc from '@bitcoinerlab/secp256k1'
+import { TonApiClient } from '@ton-api/client'
+
 import bip39 from 'bip39'
 import nacl from 'tweetnacl'
 
@@ -33,6 +35,7 @@ const BIP_44_TON_DERIVATION_PATH_BASE = "m/44'/607'/"
 export default class WalletManagerTon {
   #seedPhrase
   #config
+  #client
 
   /**
    * Creates a new wallet manager for the ton blockchain.
@@ -43,6 +46,15 @@ export default class WalletManagerTon {
   constructor (seedPhrase, config = {}) {
     if (!WalletManagerTon.isValidSeedPhrase(seedPhrase)) {
       throw new Error('The seed phrase is invalid.')
+    }
+
+    const { tonApiUrl, tonApiSecretKey } = config || {}
+
+    if (tonApiUrl && tonApiSecretKey) {
+      this.#client = new TonApiClient({
+        baseUrl: tonApiUrl,
+        apiKey: tonApiSecretKey
+      })
     }
 
     this.#seedPhrase = seedPhrase
@@ -104,6 +116,26 @@ export default class WalletManagerTon {
     const index = parseInt(lastSegment, 10)
     const keyPair = this.#deriveKeyPair(path)
     return new WalletAccountTon({ path, index, keyPair, config: this.#config })
+  }
+
+  /**
+   * Returns the current fee rates.
+   *
+   * @returns {Promise<{ normal: number, fast: number }>} The fee rates (in nanotons).
+   */
+  async getFeeRates () {
+    if (!this.#client) {
+      throw new Error('The wallet must be connected to the ton api to fetch fee rates.')
+    }
+
+    const { config: { config_param21 } } = await this.#client.blockchain.getRawBlockchainConfig()
+    const gasPriceBasechainRaw = config_param21.gas_limits_prices.gas_flat_pfx.other.gas_prices_ext.gas_price
+    const gasPriceBasechain = Math.round(gasPriceBasechainRaw / 65536)
+
+    return {
+      normal: gasPriceBasechain,
+      fast: gasPriceBasechain
+    }
   }
 
   #deriveKeyPair (hdPath) {

@@ -47,6 +47,15 @@ export default class WalletManagerTon {
      * @returns {Promise<WalletAccountTon>} The account.
      */
     getAccountByPath(path: string): Promise<WalletAccountTon>;
+    /**
+     * Returns the current fee rates.
+     *
+     * @returns {Promise<{ normal: number, fast: number }>} The fee rates (in nanotons).
+     */
+    getFeeRates(): Promise<{
+        normal: number;
+        fast: number;
+    }>;
     #private;
 }
 export type TonWalletConfig = {
