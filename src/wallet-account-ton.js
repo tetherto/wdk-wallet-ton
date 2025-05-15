@@ -97,10 +97,10 @@ export default class WalletAccountTon {
 
   /**
    * Returns the account's address.
-   * 
+   *
    * @returns {Promise<string>} The account's address.
    */
-  async getAddress() {
+  async getAddress () {
     return this.#address
   }
 
