@@ -17,8 +17,8 @@ import { TonApiClient } from '@ton-api/client'
 import bip39 from 'bip39'
 import WalletAccountTon from './wallet-account-ton.js'
 
-// Includes standard 0'/0/ segment used in BIP-44 paths
-const BIP_44_TON_DERIVATION_PATH_BASE = "m/44'/607'/0'/0/"
+// BIP-44 TON base derivation path
+const BIP_44_TON_PATH_PREFIX = "m/44'/607'/"
 
 /**
  * @typedef {Object} TonWalletConfig
@@ -93,17 +93,17 @@ export default class WalletManagerTon {
    * @returns {Promise<WalletAccountTon>} The account.
    */
   async getAccount (index = 0) {
-    return await this.getAccountByPath(`${index}`)
+    return await this.getAccountByPath(`0'/0/${index}`)
   }
 
   /**
    * Returns the wallet account at a specific BIP-44 derivation path.
    *
-   * @param {string} path - The final segment of the derivation path (e.g. "0", "1").
+   * @param {string} path - The derivation path (e.g. "0'/0/0").
    * @returns {Promise<WalletAccountTon>} The account.
    */
   async getAccountByPath (path) {
-    const fullPath = BIP_44_TON_DERIVATION_PATH_BASE + path
+    const fullPath = BIP_44_TON_PATH_PREFIX + path
     return new WalletAccountTon(this.#seedPhrase, fullPath, this.#config)
   }
 
