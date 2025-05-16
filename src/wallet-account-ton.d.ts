@@ -10,12 +10,13 @@
  * @property {boolean} [bounceable] - If set, overrides the bounceability of the transaction.
  */
 export default class WalletAccountTon {
-    constructor({ path, index, keyPair, config }: {
-        path: any;
-        index: any;
-        keyPair: any;
-        config: any;
-    });
+    static "__#2@#deriveKeyPair"(seedPhrase: any, hdPath: any): any;
+    /**
+     * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+     * @param {string} path - The BIP-44 derivation path.
+     * @param {Object} [config] - The configuration object.
+     */
+    constructor(seedPhrase: string, path: string, config?: any);
     /**
      * The derivation path's index of this account.
      *
@@ -25,9 +26,9 @@ export default class WalletAccountTon {
     /**
      * The derivation path of this account (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
      *
-     * @type {number}
+     * @type {string}
      */
-    get path(): number;
+    get path(): string;
     /**
      * The account's key pair.
      *
