@@ -56,6 +56,13 @@ export default class WalletAccountTon {
      */
     verify(message: string, signature: string): Promise<boolean>;
     /**
+     * Quotes a transaction.
+     *
+     * @param {TonTransaction} tx - The transaction to quote.
+     * @returns {Promise<number>} - The transaction’s fee (in nanotons).
+     */
+    quoteTransaction({ to, value, bounceable }: TonTransaction): Promise<number>;
+    /**
      * Sends a transaction with arbitrary data.
      *
      * @param {TonTransaction} tx - The transaction to send.

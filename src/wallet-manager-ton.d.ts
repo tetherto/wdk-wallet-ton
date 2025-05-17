@@ -2,6 +2,8 @@
  * @typedef {Object} TonWalletConfig
  * @property {string} [tonApiUrl] - The ton api's url.
  * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
+ * @property {string} [tonCenterUrl] - The ton center api's url.
+ * @property {string} [tonCenterSecretKey] - The api-key to use to authenticate on the ton center api.
  */
 export default class WalletManagerTon {
     /**
@@ -67,5 +69,13 @@ export type TonWalletConfig = {
      * - The api-key to use to authenticate on the ton api.
      */
     tonApiSecretKey?: string;
+    /**
+     * - The ton center api's url.
+     */
+    tonCenterUrl?: string;
+    /**
+     * - The api-key to use to authenticate on the ton center api.
+     */
+    tonCenterSecretKey?: string;
 };
 import WalletAccountTon from './wallet-account-ton.js';

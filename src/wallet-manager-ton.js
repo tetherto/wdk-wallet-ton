@@ -30,6 +30,8 @@ const BIP_44_TON_DERIVATION_PATH_BASE = "m/44'/607'/"
  * @typedef {Object} TonWalletConfig
  * @property {string} [tonApiUrl] - The ton api's url.
  * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
+ * @property {string} [tonCenterUrl] - The ton center api's url.
+ * @property {string} [tonCenterSecretKey] - The api-key to use to authenticate on the ton center api.
  */
 
 export default class WalletManagerTon {
