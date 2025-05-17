@@ -17,7 +17,7 @@ import { BIP32Factory } from 'bip32'
 import ecc from '@bitcoinerlab/secp256k1'
 import { TonApiClient } from '@ton-api/client'
 
-import bip39 from 'bip39'
+import * as bip39 from 'bip39'
 import nacl from 'tweetnacl'
 
 import WalletAccountTon from './wallet-account-ton.js'
