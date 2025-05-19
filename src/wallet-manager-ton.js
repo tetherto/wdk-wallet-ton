@@ -17,14 +17,8 @@ import { TonApiClient } from '@ton-api/client'
 import bip39 from 'bip39'
 import WalletAccountTon from './wallet-account-ton.js'
 
-// BIP-44 TON base derivation path
-const BIP_44_TON_PATH_PREFIX = "m/44'/607'/"
+/** @typedef {import('./wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
 
-/**
- * @typedef {Object} TonWalletConfig
- * @property {string} [tonApiUrl] - The ton api's url.
- * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
- */
 
 export default class WalletManagerTon {
   #seedPhrase
@@ -34,7 +28,7 @@ export default class WalletManagerTon {
   /**
    * Creates a new wallet manager for the ton blockchain.
    *
-   * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+   * @param {string} seedPhrase - The bip-39 mnemonic.
    * @param {TonWalletConfig} [config] - The configuration object.
    */
   constructor (seedPhrase, config = {}) {
@@ -42,7 +36,7 @@ export default class WalletManagerTon {
       throw new Error('The seed phrase is invalid.')
     }
 
-    const { tonApiUrl, tonApiSecretKey } = config || {}
+    const { tonApiUrl, tonApiSecretKey } = config
 
     if (tonApiUrl && tonApiSecretKey) {
       this.#client = new TonApiClient({
@@ -89,7 +83,7 @@ export default class WalletManagerTon {
    * @example
    * // Returns the account with derivation path m/44'/607'/0'/0/1
    * const account = await wallet.getAccount(1);
-   * @param {number} index - The index of the account to get (default: 0).
+   * @param {number} [index] - The index of the account to get (default: 0).
    * @returns {Promise<WalletAccountTon>} The account.
    */
   async getAccount (index = 0) {
@@ -99,12 +93,11 @@ export default class WalletManagerTon {
   /**
    * Returns the wallet account at a specific BIP-44 derivation path.
    *
-   * @param {string} path - The derivation path (e.g. "0'/0/0").
+   * @param {string} path - The derivation path suffix (e.g. "0'/0/0").
    * @returns {Promise<WalletAccountTon>} The account.
    */
   async getAccountByPath (path) {
-    const fullPath = BIP_44_TON_PATH_PREFIX + path
-    return new WalletAccountTon(this.#seedPhrase, fullPath, this.#config)
+    return new WalletAccountTon(this.#seedPhrase, path, this.#config)
   }
 
   /**

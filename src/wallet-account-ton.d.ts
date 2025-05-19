@@ -1,22 +1,11 @@
-/**
- * @typedef {Object} KeyPair
- * @property {string} publicKey - The public key.
- * @property {string} privateKey - The private key.
- */
-/**
- * @typedef {Object} TonTransaction
- * @property {string} to - The transaction's recipient.
- * @property {number} value - The amount of tons to send to the recipient (in nanotons).
- * @property {boolean} [bounceable] - If set, overrides the bounceability of the transaction.
- */
 export default class WalletAccountTon {
     static "__#2@#deriveKeyPair"(seedPhrase: any, hdPath: any): any;
     /**
-     * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
-     * @param {string} path - The BIP-44 derivation path.
-     * @param {Object} [config] - The configuration object.
+     * @param {string} seedPhrase - The bip-39 mnemonic.
+     * @param {string} path - The BIP-44 derivation path suffix (e.g. "0'/0/0").
+     * @param {TonWalletConfig} [config] - The configuration object.
      */
-    constructor(seedPhrase: string, path: string, config?: any);
+    constructor(seedPhrase: string, path: string, config?: TonWalletConfig);
     /**
      * The derivation path's index of this account.
      *
@@ -101,4 +90,14 @@ export type TonTransaction = {
      * - If set, overrides the bounceability of the transaction.
      */
     bounceable?: boolean;
+};
+export type TonWalletConfig = {
+    /**
+     * - The ton api's url.
+     */
+    tonApiUrl?: string;
+    /**
+     * - The api-key to use to authenticate on the ton api.
+     */
+    tonApiSecretKey?: string;
 };

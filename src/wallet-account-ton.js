@@ -23,8 +23,6 @@ import ecc from '@bitcoinerlab/secp256k1'
 import bip39 from 'bip39'
 import nacl from 'tweetnacl'
 
-const bip32 = BIP32Factory(ecc)
-
 /**
  * @typedef {Object} KeyPair
  * @property {string} publicKey - The public key.
@@ -38,9 +36,19 @@ const bip32 = BIP32Factory(ecc)
  * @property {boolean} [bounceable] - If set, overrides the bounceability of the transaction.
  */
 
+/**
+ * @typedef {Object} TonWalletConfig
+ * @property {string} [tonApiUrl] - The ton api's url.
+ * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
+ */
+
+
+const bip32 = BIP32Factory(ecc)
+const BIP_44_TON_PATH_PREFIX = "m/44'/607'/"
+
+
 export default class WalletAccountTon {
   #path
-  #index
   #address
   #keyPair
 
@@ -49,18 +57,18 @@ export default class WalletAccountTon {
   #contractAdapter
 
   /**
-   * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
-   * @param {string} path - The BIP-44 derivation path.
-   * @param {Object} [config] - The configuration object.
+   * @param {string} seedPhrase - The bip-39 mnemonic.
+   * @param {string} path - The BIP-44 derivation path suffix (e.g. "0'/0/0").
+   * @param {TonWalletConfig} [config] - The configuration object.
    */
   constructor (seedPhrase, path, config = {}) {
-    const keyPair = WalletAccountTon.#deriveKeyPair(seedPhrase, path)
+    const fullPath = BIP_44_TON_PATH_PREFIX + path
 
+    const keyPair = WalletAccountTon.#deriveKeyPair(seedPhrase, fullPath)
     const wallet = WalletContractV5R1.create({ workchain: 0, publicKey: keyPair.publicKey })
     const address = wallet.address.toString({ urlSafe: true, bounceable: false, testOnly: false })
 
-    this.#path = path
-    this.#index = index
+    this.#path = fullPath
     this.#address = address
     this.#keyPair = { privateKey: keyPair.secretKey, publicKey: keyPair.publicKey }
     this.#wallet = wallet
@@ -78,7 +86,7 @@ export default class WalletAccountTon {
    * @type {number}
    */
   get index () {
-    return this.#index
+    return parseInt(this.#path.split('/').pop().replace(/'/g, ''), 10)
   }
 
   /**
@@ -146,7 +154,7 @@ export default class WalletAccountTon {
    */
   async sendTransaction ({ to, value, bounceable }) {
     if (!this.#contractAdapter) {
-      throw new Error('The wallet must be connected to the ton api to send transactions.')
+      throw new Error('The wallet must be connected to the ton api.')
     }
 
     const _to = Address.parseFriendly(to)
