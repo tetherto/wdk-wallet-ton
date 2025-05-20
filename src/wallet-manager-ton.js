@@ -13,26 +13,11 @@
 // limitations under the License.
 'use strict'
 
-import { BIP32Factory } from 'bip32'
-import ecc from '@bitcoinerlab/secp256k1'
 import { TonApiClient } from '@ton-api/client'
-
 import * as bip39 from 'bip39'
-import nacl from 'tweetnacl'
-
 import WalletAccountTon from './wallet-account-ton.js'
 
-const bip32 = BIP32Factory(ecc)
-
-const BIP_44_TON_DERIVATION_PATH_BASE = "m/44'/607'/"
-
-/**
- * @typedef {Object} TonWalletConfig
- * @property {string} [tonApiUrl] - The ton api's url.
- * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
- * @property {string} [tonCenterUrl] - The ton center api's url.
- * @property {string} [tonCenterSecretKey] - The api-key to use to authenticate on the ton center api.
- */
+/** @typedef {import('./wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
 
 export default class WalletManagerTon {
   #seedPhrase
@@ -50,7 +35,11 @@ export default class WalletManagerTon {
       throw new Error('The seed phrase is invalid.')
     }
 
-    const { tonApiUrl, tonApiSecretKey } = config || {}
+    this.#seedPhrase = seedPhrase
+
+    this.#config = config
+
+    const { tonApiUrl, tonApiSecretKey } = config
 
     if (tonApiUrl && tonApiSecretKey) {
       this.#client = new TonApiClient({
@@ -58,10 +47,6 @@ export default class WalletManagerTon {
         apiKey: tonApiSecretKey
       })
     }
-
-    this.#seedPhrase = seedPhrase
-
-    this.#config = config
   }
 
   /**
@@ -98,7 +83,7 @@ export default class WalletManagerTon {
    * @example
    * // Returns the account with derivation path m/44'/607'/0'/0/1
    * const account = await wallet.getAccount(1);
-   * @param {number} index - The index of the account to get (default: 0).
+   * @param {number} [index] - The index of the account to get (default: 0).
    * @returns {Promise<WalletAccountTon>} The account.
    */
   async getAccount (index = 0) {
@@ -112,12 +97,7 @@ export default class WalletManagerTon {
    * @returns {Promise<WalletAccountTon>} The account.
    */
   async getAccountByPath (path) {
-    path = BIP_44_TON_DERIVATION_PATH_BASE + path
-    const segments = path.split('/')
-    const lastSegment = segments[segments.length - 1]
-    const index = parseInt(lastSegment, 10)
-    const keyPair = this.#deriveKeyPair(path)
-    return new WalletAccountTon({ path, index, keyPair, config: this.#config })
+    return new WalletAccountTon(this.#seedPhrase, path, this.#config)
   }
 
   /**
@@ -138,16 +118,5 @@ export default class WalletManagerTon {
       normal: gasPriceBasechain,
       fast: gasPriceBasechain
     }
-  }
-
-  #deriveKeyPair (hdPath) {
-    const seed = bip39.mnemonicToSeedSync(this.#seedPhrase)
-
-    const { privateKey } = bip32.fromSeed(seed)
-      .derivePath(hdPath)
-
-    const keyPair = nacl.sign.keyPair.fromSeed(privateKey)
-
-    return { privateKey: keyPair.secretKey, publicKey: keyPair.publicKey }
   }
 }
