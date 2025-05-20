@@ -1,8 +1,7 @@
 export default class WalletAccountTon {
-    static "__#2@#deriveKeyPair"(seedPhrase: any, hdPath: any): any;
     /**
      * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
-     * @param {string} path - The BIP-44 derivation path suffix (e.g. "0'/0/0").
+     * @param {string} path - The BIP-44 derivation path (e.g. "0'/0/0").
      * @param {TonWalletConfig} [config] - The configuration object.
      */
     constructor(seedPhrase: string, path: string, config?: TonWalletConfig);

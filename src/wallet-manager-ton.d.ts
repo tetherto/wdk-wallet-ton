@@ -39,7 +39,7 @@ export default class WalletManagerTon {
     /**
      * Returns the wallet account at a specific BIP-44 derivation path.
      *
-     * @param {string} path - The derivation path suffix (e.g. "0'/0/0").
+     * @param {string} path - The derivation path (e.g. "0'/0/0").
      * @returns {Promise<WalletAccountTon>} The account.
      */
     getAccountByPath(path: string): Promise<WalletAccountTon>;
