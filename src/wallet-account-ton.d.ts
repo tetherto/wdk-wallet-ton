@@ -1,7 +1,7 @@
 export default class WalletAccountTon {
     static "__#2@#deriveKeyPair"(seedPhrase: any, hdPath: any): any;
     /**
-     * @param {string} seedPhrase - The bip-39 mnemonic.
+     * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
      * @param {string} path - The BIP-44 derivation path suffix (e.g. "0'/0/0").
      * @param {TonWalletConfig} [config] - The configuration object.
      */
@@ -45,6 +45,13 @@ export default class WalletAccountTon {
      * @returns {Promise<boolean>} True if the signature is valid.
      */
     verify(message: string, signature: string): Promise<boolean>;
+    /**
+     * Quotes a transaction.
+     *
+     * @param {TonTransaction} tx - The transaction to quote.
+     * @returns {Promise<number>} - The transaction’s fee (in nanotons).
+     */
+    quoteTransaction({ to, value, bounceable }: TonTransaction): Promise<number>;
     /**
      * Sends a transaction with arbitrary data.
      *
@@ -100,4 +107,12 @@ export type TonWalletConfig = {
      * - The api-key to use to authenticate on the ton api.
      */
     tonApiSecretKey?: string;
+    /**
+     * - The ton center api's url.
+     */
+    tonCenterUrl?: string;
+    /**
+     * - The api-key to use to authenticate on the ton center api.
+     */
+    tonCenterSecretKey?: string;
 };

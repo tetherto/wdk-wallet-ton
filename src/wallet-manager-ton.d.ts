@@ -16,7 +16,7 @@ export default class WalletManagerTon {
     /**
      * Creates a new wallet manager for the ton blockchain.
      *
-     * @param {string} seedPhrase - The bip-39 mnemonic.
+     * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
      * @param {TonWalletConfig} [config] - The configuration object.
      */
     constructor(seedPhrase: string, config?: TonWalletConfig);

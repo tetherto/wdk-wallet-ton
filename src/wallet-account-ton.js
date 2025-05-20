@@ -15,7 +15,7 @@
 
 import { beginCell, fromNano } from '@ton/core'
 import { sign, signVerify } from '@ton/crypto'
-import { Address, WalletContractV5R1, internal, SendMode } from '@ton/ton'
+import { Address, WalletContractV5R1, internal, TonClient, SendMode } from '@ton/ton'
 import { TonApiClient } from '@ton-api/client'
 import { ContractAdapter } from '@ton-api/ton-adapter'
 import { BIP32Factory } from 'bip32'
@@ -40,6 +40,8 @@ import nacl from 'tweetnacl'
  * @typedef {Object} TonWalletConfig
  * @property {string} [tonApiUrl] - The ton api's url.
  * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
+ * @property {string} [tonCenterUrl] - The ton center api's url.
+ * @property {string} [tonCenterSecretKey] - The api-key to use to authenticate on the ton center api.
  */
 
 
@@ -52,6 +54,7 @@ export default class WalletAccountTon {
   #address
   #keyPair
 
+  #tonCenter
   #client
   #wallet
   #contractAdapter
@@ -73,7 +76,15 @@ export default class WalletAccountTon {
     this.#keyPair = { privateKey: keyPair.secretKey, publicKey: keyPair.publicKey }
     this.#wallet = wallet
 
-    const { tonApiUrl, tonApiSecretKey } = config
+    const { tonCenterUrl, tonCenterSecretKey, tonApiUrl, tonApiSecretKey } = config
+
+    if (tonCenterUrl && tonCenterSecretKey) {
+      this.#tonCenter = new TonClient({
+        endpoint: tonCenterUrl,
+        apiKey: tonCenterSecretKey
+      })
+    }
+
     if (tonApiUrl && tonApiSecretKey) {
       this.#client = new TonApiClient({ baseUrl: tonApiUrl, apiKey: tonApiSecretKey })
       this.#contractAdapter = new ContractAdapter(this.#client)
@@ -147,33 +158,31 @@ export default class WalletAccountTon {
   }
 
   /**
+   * Quotes a transaction.
+   *
+   * @param {TonTransaction} tx - The transaction to quote.
+   * @returns {Promise<number>} - The transaction’s fee (in nanotons).
+   */
+  async quoteTransaction ({ to, value, bounceable }) {
+    if (!this.#tonCenter) {
+      throw new Error('The wallet must be connected to ton center to quote transactions.')
+    }
+
+    const { transfer } = await this.#getTransfer({ to, value, bounceable })
+
+    const { source_fees: { in_fwd_fee, storage_fee, gas_fee, fwd_fee } } = await this.#tonCenter.estimateExternalMessageFee(this.#wallet.address, { body: transfer })
+
+    return in_fwd_fee + storage_fee + gas_fee + fwd_fee
+  }
+
+  /**
    * Sends a transaction with arbitrary data.
    *
    * @param {TonTransaction} tx - The transaction to send.
    * @returns {Promise<string>} The transaction's hash.
    */
   async sendTransaction ({ to, value, bounceable }) {
-    if (!this.#contractAdapter) {
-      throw new Error('The wallet must be connected to the ton api.')
-    }
-
-    const _to = Address.parseFriendly(to)
-
-    const contract = this.#contractAdapter.open(this.#wallet)
-
-    const message = internal({
-      to: _to.address,
-      value: fromNano(value).toString(),
-      body: 'Transfer',
-      bounce: bounceable ?? _to.isBounceable
-    })
-
-    const transfer = contract.createTransfer({
-      secretKey: this.#keyPair.privateKey,
-      seqno: await contract.getSeqno(),
-      sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
-      messages: [message]
-    })
+    const { contract, transfer, message } = await this.#getTransfer({ to, value, bounceable })
 
     await contract.send(transfer)
 
@@ -217,6 +226,32 @@ export default class WalletAccountTon {
     )
 
     return Number(balanceResponse.decoded.balance)
+  }
+
+  async #getTransfer ({ to, value, bounceable }) {
+    if (!this.#contractAdapter) {
+      throw new Error('The wallet must be connected to the ton api to send or quote transactions.')
+    }
+
+    const _to = Address.parseFriendly(to)
+
+    const contract = this.#contractAdapter.open(this.#wallet)
+
+    const message = internal({
+      to: _to.address,
+      value: fromNano(value).toString(),
+      body: 'Transfer',
+      bounce: bounceable ?? _to.isBounceable
+    })
+
+    const transfer = contract.createTransfer({
+      secretKey: this.#keyPair.privateKey,
+      seqno: await contract.getSeqno(),
+      sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+      messages: [message]
+    })
+
+    return { contract, transfer, message }
   }
 
   async #getJettonWalletAddress (tokenAddress) {
