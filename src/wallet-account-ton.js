@@ -86,7 +86,7 @@ export default class WalletAccountTon {
    * @type {number}
    */
   get index () {
-    return parseInt(this.#path.split('/').pop().replace(/'/g, ''), 10)
+    return +this.#path.split('/').pop()
   }
 
   /**
