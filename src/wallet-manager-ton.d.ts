@@ -2,6 +2,8 @@
  * @typedef {Object} TonWalletConfig
  * @property {string} [tonApiUrl] - The ton api's url.
  * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
+ * @property {string} [tonCenterUrl] - The ton center api's url.
+ * @property {string} [tonCenterSecretKey] - The api-key to use to authenticate on the ton center api.
  */
 export default class WalletManagerTon {
     /**
@@ -40,6 +42,22 @@ export default class WalletManagerTon {
      * @returns {Promise<WalletAccountTon>} The account.
      */
     getAccount(index?: number): Promise<WalletAccountTon>;
+    /**
+     * Returns the wallet account at a specific BIP-44 derivation path.
+     *
+     * @param {string} path - The derivation path (e.g. "0'/0/0").
+     * @returns {Promise<WalletAccountTon>} The account.
+     */
+    getAccountByPath(path: string): Promise<WalletAccountTon>;
+    /**
+     * Returns the current fee rates.
+     *
+     * @returns {Promise<{ normal: number, fast: number }>} The fee rates (in nanotons).
+     */
+    getFeeRates(): Promise<{
+        normal: number;
+        fast: number;
+    }>;
     #private;
 }
 export type TonWalletConfig = {
@@ -51,5 +69,13 @@ export type TonWalletConfig = {
      * - The api-key to use to authenticate on the ton api.
      */
     tonApiSecretKey?: string;
+    /**
+     * - The ton center api's url.
+     */
+    tonCenterUrl?: string;
+    /**
+     * - The api-key to use to authenticate on the ton center api.
+     */
+    tonCenterSecretKey?: string;
 };
 import WalletAccountTon from './wallet-account-ton.js';

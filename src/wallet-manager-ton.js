@@ -15,24 +15,29 @@
 
 import { BIP32Factory } from 'bip32'
 import ecc from '@bitcoinerlab/secp256k1'
-import bip39 from 'bip39'
+import { TonApiClient } from '@ton-api/client'
+
+import * as bip39 from 'bip39'
 import nacl from 'tweetnacl'
 
 import WalletAccountTon from './wallet-account-ton.js'
 
 const bip32 = BIP32Factory(ecc)
 
-const BIP_44_TON_DERIVATION_PATH_BASE = 'm/44\'/607\'/0\'/0'
+const BIP_44_TON_DERIVATION_PATH_BASE = "m/44'/607'/"
 
 /**
  * @typedef {Object} TonWalletConfig
  * @property {string} [tonApiUrl] - The ton api's url.
  * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
+ * @property {string} [tonCenterUrl] - The ton center api's url.
+ * @property {string} [tonCenterSecretKey] - The api-key to use to authenticate on the ton center api.
  */
 
 export default class WalletManagerTon {
   #seedPhrase
   #config
+  #client
 
   /**
    * Creates a new wallet manager for the ton blockchain.
@@ -43,6 +48,15 @@ export default class WalletManagerTon {
   constructor (seedPhrase, config = {}) {
     if (!WalletManagerTon.isValidSeedPhrase(seedPhrase)) {
       throw new Error('The seed phrase is invalid.')
+    }
+
+    const { tonApiUrl, tonApiSecretKey } = config || {}
+
+    if (tonApiUrl && tonApiSecretKey) {
+      this.#client = new TonApiClient({
+        baseUrl: tonApiUrl,
+        apiKey: tonApiSecretKey
+      })
     }
 
     this.#seedPhrase = seedPhrase
@@ -88,9 +102,42 @@ export default class WalletManagerTon {
    * @returns {Promise<WalletAccountTon>} The account.
    */
   async getAccount (index = 0) {
-    const path = `${BIP_44_TON_DERIVATION_PATH_BASE}/${index}`
+    return await this.getAccountByPath(`0'/0/${index}`)
+  }
+
+  /**
+   * Returns the wallet account at a specific BIP-44 derivation path.
+   *
+   * @param {string} path - The derivation path (e.g. "0'/0/0").
+   * @returns {Promise<WalletAccountTon>} The account.
+   */
+  async getAccountByPath (path) {
+    path = BIP_44_TON_DERIVATION_PATH_BASE + path
+    const segments = path.split('/')
+    const lastSegment = segments[segments.length - 1]
+    const index = parseInt(lastSegment, 10)
     const keyPair = this.#deriveKeyPair(path)
     return new WalletAccountTon({ path, index, keyPair, config: this.#config })
+  }
+
+  /**
+   * Returns the current fee rates.
+   *
+   * @returns {Promise<{ normal: number, fast: number }>} The fee rates (in nanotons).
+   */
+  async getFeeRates () {
+    if (!this.#client) {
+      throw new Error('The wallet must be connected to the ton api to fetch fee rates.')
+    }
+
+    const { config: { config_param21 } } = await this.#client.blockchain.getRawBlockchainConfig()
+    const gasPriceBasechainRaw = config_param21.gas_limits_prices.gas_flat_pfx.other.gas_prices_ext.gas_price
+    const gasPriceBasechain = Math.round(gasPriceBasechainRaw / 65536)
+
+    return {
+      normal: gasPriceBasechain,
+      fast: gasPriceBasechain
+    }
   }
 
   #deriveKeyPair (hdPath) {
