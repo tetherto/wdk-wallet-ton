@@ -57,7 +57,7 @@ export default class WalletAccountTon {
   #contractAdapter
 
   /**
-   * @param {string} seedPhrase - The bip-39 mnemonic.
+   * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
    * @param {string} path - The BIP-44 derivation path suffix (e.g. "0'/0/0").
    * @param {TonWalletConfig} [config] - The configuration object.
    */
