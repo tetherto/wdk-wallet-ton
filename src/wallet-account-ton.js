@@ -18,10 +18,11 @@ import { sign, signVerify } from '@ton/crypto'
 import { Address, WalletContractV5R1, internal, TonClient, SendMode } from '@ton/ton'
 import { TonApiClient } from '@ton-api/client'
 import { ContractAdapter } from '@ton-api/ton-adapter'
+
 import { BIP32Factory } from 'bip32'
 import ecc from '@bitcoinerlab/secp256k1'
-import bip39 from 'bip39'
 import nacl from 'tweetnacl'
+import * as bip39 from 'bip39'
 
 /**
  * @typedef {Object} KeyPair
@@ -44,37 +45,34 @@ import nacl from 'tweetnacl'
  * @property {string} [tonCenterSecretKey] - The api-key to use to authenticate on the ton center api.
  */
 
-
 const bip32 = BIP32Factory(ecc)
-const BIP_44_TON_PATH_PREFIX = "m/44'/607'/"
 
+const BIP_44_TON_DERIVATION_PATH_PREFIX = "m/44'/607'"
 
 export default class WalletAccountTon {
-  #path
+  #wallet
   #address
+  #path
   #keyPair
 
   #tonCenter
   #client
-  #wallet
   #contractAdapter
 
   /**
    * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
-   * @param {string} path - The BIP-44 derivation path suffix (e.g. "0'/0/0").
+   * @param {string} path - The BIP-44 derivation path (e.g. "0'/0/0").
    * @param {TonWalletConfig} [config] - The configuration object.
    */
   constructor (seedPhrase, path, config = {}) {
-    const fullPath = BIP_44_TON_PATH_PREFIX + path
+    path = `${BIP_44_TON_DERIVATION_PATH_PREFIX}/${path}`
 
-    const keyPair = WalletAccountTon.#deriveKeyPair(seedPhrase, fullPath)
-    const wallet = WalletContractV5R1.create({ workchain: 0, publicKey: keyPair.publicKey })
-    const address = wallet.address.toString({ urlSafe: true, bounceable: false, testOnly: false })
+    const keyPair = WalletAccountTon.#deriveKeyPair(seedPhrase, path)
 
-    this.#path = fullPath
-    this.#address = address
-    this.#keyPair = { privateKey: keyPair.secretKey, publicKey: keyPair.publicKey }
-    this.#wallet = wallet
+    this.#wallet = WalletContractV5R1.create({ workchain: 0, publicKey: keyPair.publicKey })
+    this.#address = this.#wallet.address.toString({ urlSafe: true, bounceable: false, testOnly: false })
+    this.#path = path
+    this.#keyPair = keyPair
 
     const { tonCenterUrl, tonCenterSecretKey, tonApiUrl, tonApiSecretKey } = config
 
@@ -86,7 +84,11 @@ export default class WalletAccountTon {
     }
 
     if (tonApiUrl && tonApiSecretKey) {
-      this.#client = new TonApiClient({ baseUrl: tonApiUrl, apiKey: tonApiSecretKey })
+      this.#client = new TonApiClient({ 
+        baseUrl: tonApiUrl,
+        apiKey: tonApiSecretKey 
+      })
+
       this.#contractAdapter = new ContractAdapter(this.#client)
     }
   }
@@ -165,7 +167,7 @@ export default class WalletAccountTon {
    */
   async quoteTransaction ({ to, value, bounceable }) {
     if (!this.#tonCenter) {
-      throw new Error('The wallet must be connected to ton center to quote transactions.')
+      throw new Error('The wallet must be connected to the ton center api to quote transactions.')
     }
 
     const { transfer } = await this.#getTransfer({ to, value, bounceable })
@@ -198,7 +200,7 @@ export default class WalletAccountTon {
    */
   async getBalance () {
     if (!this.#contractAdapter) {
-      throw new Error('The wallet must be connected to the ton api.')
+      throw new Error('The wallet must be connected to the ton api to get balances.')
     }
 
     const contract = this.#contractAdapter.open(this.#wallet)
@@ -216,16 +218,15 @@ export default class WalletAccountTon {
    */
   async getTokenBalance (tokenAddress) {
     if (!this.#client) {
-      throw new Error('The wallet must be connected to the ton api.')
+      throw new Error('The wallet must be connected to the ton api to get token balances.')
     }
 
-    const jettonAddress = await this.#getJettonWalletAddress(tokenAddress)
-    const balanceResponse = await this.#client.blockchain.execGetMethodForBlockchainAccount(
-      jettonAddress,
-      'get_wallet_data'
-    )
+    const jettonWalletAddress = await this.#getJettonWalletAddress(tokenAddress)
 
-    return Number(balanceResponse.decoded.balance)
+    const { decoded: { balance } } = await this.#client.blockchain
+      .execGetMethodForBlockchainAccount(jettonWalletAddress, 'get_wallet_data')
+
+    return Number(balance)
   }
 
   async #getTransfer ({ to, value, bounceable }) {
@@ -287,6 +288,8 @@ export default class WalletAccountTon {
   static #deriveKeyPair (seedPhrase, hdPath) {
     const seed = bip39.mnemonicToSeedSync(seedPhrase)
     const { privateKey } = bip32.fromSeed(seed).derivePath(hdPath)
-    return nacl.sign.keyPair.fromSeed(privateKey)
+    const keyPair = nacl.sign.keyPair.fromSeed(privateKey)
+
+    return { privateKey: keyPair.secretKey, publicKey: keyPair.publicKey }
   }
 }

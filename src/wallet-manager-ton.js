@@ -14,11 +14,10 @@
 'use strict'
 
 import { TonApiClient } from '@ton-api/client'
-import bip39 from 'bip39'
+import * as bip39 from 'bip39'
 import WalletAccountTon from './wallet-account-ton.js'
 
 /** @typedef {import('./wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
-
 
 export default class WalletManagerTon {
   #seedPhrase
@@ -36,6 +35,10 @@ export default class WalletManagerTon {
       throw new Error('The seed phrase is invalid.')
     }
 
+    this.#seedPhrase = seedPhrase
+
+    this.#config = config
+
     const { tonApiUrl, tonApiSecretKey } = config
 
     if (tonApiUrl && tonApiSecretKey) {
@@ -44,9 +47,6 @@ export default class WalletManagerTon {
         apiKey: tonApiSecretKey
       })
     }
-
-    this.#seedPhrase = seedPhrase
-    this.#config = config
   }
 
   /**
@@ -93,7 +93,7 @@ export default class WalletManagerTon {
   /**
    * Returns the wallet account at a specific BIP-44 derivation path.
    *
-   * @param {string} path - The derivation path suffix (e.g. "0'/0/0").
+   * @param {string} path - The derivation path (e.g. "0'/0/0").
    * @returns {Promise<WalletAccountTon>} The account.
    */
   async getAccountByPath (path) {
