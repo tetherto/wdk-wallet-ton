@@ -39,9 +39,9 @@ import * as bip39 from 'bip39'
 
 /**
  * @typedef {Object} TonWalletConfig
- * @property {string} [tonApiUrl] - The ton api's url.
+ * @property {string | TonApiClient} [tonApiUrl] - The url of ton api, or a instance of the {@link TonApiClient} class.
  * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
- * @property {string} [tonCenterUrl] - The ton center api's url.
+ * @property {string | TonClient } [tonCenterUrl] - The ton center api's url, or a instance of the {@link TonClient} class.
  * @property {string} [tonCenterSecretKey] - The api-key to use to authenticate on the ton center api.
  */
 
@@ -73,22 +73,26 @@ export default class WalletAccountTon {
     this.#address = this.#wallet.address.toString({ urlSafe: true, bounceable: false, testOnly: false })
     this.#path = path
     this.#keyPair = keyPair
+    this.#tonCenter = config.tonCenter
+    this.#client = config.tonApi
 
     const { tonCenterUrl, tonCenterSecretKey, tonApiUrl, tonApiSecretKey } = config
 
-    if (tonCenterUrl && tonCenterSecretKey) {
+    if (!this.#tonCenter && tonCenterUrl && tonCenterSecretKey) {
       this.#tonCenter = new TonClient({
         endpoint: tonCenterUrl,
         apiKey: tonCenterSecretKey
       })
     }
 
-    if (tonApiUrl && tonApiSecretKey) {
-      this.#client = new TonApiClient({ 
+    if (!this.#client && tonApiUrl && tonApiSecretKey) {
+      this.#client = new TonApiClient({
         baseUrl: tonApiUrl,
-        apiKey: tonApiSecretKey 
+        apiKey: tonApiSecretKey
       })
+    }
 
+    if (this.#client) {
       this.#contractAdapter = new ContractAdapter(this.#client)
     }
   }

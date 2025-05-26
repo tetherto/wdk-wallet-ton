@@ -36,12 +36,12 @@ export default class WalletManagerTon {
     }
 
     this.#seedPhrase = seedPhrase
-
     this.#config = config
+    this.#client = config.tonApi
 
     const { tonApiUrl, tonApiSecretKey } = config
 
-    if (tonApiUrl && tonApiSecretKey) {
+    if (!this.#client && tonApiUrl && tonApiSecretKey) {
       this.#client = new TonApiClient({
         baseUrl: tonApiUrl,
         apiKey: tonApiSecretKey

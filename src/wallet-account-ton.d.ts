@@ -99,17 +99,17 @@ export type TonTransaction = {
 };
 export type TonWalletConfig = {
     /**
-     * - The ton api's url.
+     * - The url of ton api, or a instance of the {@link TonApiClient} class.
      */
-    tonApiUrl?: string;
+    tonApiUrl?: string | TonApiClient;
     /**
      * - The api-key to use to authenticate on the ton api.
      */
     tonApiSecretKey?: string;
     /**
-     * - The ton center api's url.
+     * - The ton center api's url, or a instance of the {@link TonClient} class.
      */
-    tonCenterUrl?: string;
+    tonCenterUrl?: string | TonClient;
     /**
      * - The api-key to use to authenticate on the ton center api.
      */
