@@ -18,21 +18,15 @@ import { sign, signVerify } from '@ton/crypto'
 import { Address, WalletContractV5R1, internal, TonClient, SendMode } from '@ton/ton'
 import { TonApiClient } from '@ton-api/client'
 import { ContractAdapter } from '@ton-api/ton-adapter'
+import sodium from 'sodium-universal'
 
 import { BIP32Factory } from 'bip32'
 import ecc from '@bitcoinerlab/secp256k1'
 import nacl from 'tweetnacl'
-import * as bip39 from 'bip39'
 
 /** @typedef {import('@ton/ton').TonClient} TonClient */
 
 /** @typedef {import('@ton-api/client').TonApiClient} TonApiClient */
-
-/**
- * @typedef {Object} KeyPair
- * @property {string} publicKey - The public key.
- * @property {string} privateKey - The private key.
- */
 
 /**
  * @typedef {Object} TonTransaction
@@ -49,6 +43,12 @@ import * as bip39 from 'bip39'
  * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
  */
 
+/**
+ * @typedef {Object} KeyPair
+ * @property {Uint8Array} publicKey - The public key.
+ * @property {Uint8Array} privateKey - The private key.
+ */
+
 const bip32 = BIP32Factory(ecc)
 
 const BIP_44_TON_DERIVATION_PATH_PREFIX = "m/44'/607'"
@@ -57,26 +57,29 @@ export default class WalletAccountTon {
   #wallet
   #address
   #path
-  #keyPair
+
+  #secretKeyBuffer
+  #publicKeyBuffer
+  #privateKeyBuffer
 
   #tonCenter
   #tonApi
   #contractAdapter
 
   /**
-   * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+   * @param {Uint8Array} seedBuffer - Uint8Array seedBuffer buffer.
    * @param {string} path - The BIP-44 derivation path (e.g. "0'/0/0").
    * @param {TonWalletConfig} [config] - The configuration object.
    */
-  constructor (seedPhrase, path, config = {}) {
+  constructor (seedBuffer, path, config = {}) {
     path = `${BIP_44_TON_DERIVATION_PATH_PREFIX}/${path}`
 
-    const keyPair = WalletAccountTon.#deriveKeyPair(seedPhrase, path)
+    ;({ privateKey: this.#privateKeyBuffer } = bip32.fromSeed(seedBuffer).derivePath(path))
+    ;({ secretKey: this.#secretKeyBuffer, publicKey: this.#publicKeyBuffer } = nacl.sign.keyPair.fromSeed(this.#privateKeyBuffer))
 
-    this.#wallet = WalletContractV5R1.create({ workchain: 0, publicKey: keyPair.publicKey })
+    this.#wallet = WalletContractV5R1.create({ workchain: 0, publicKey: this.#publicKeyBuffer })
     this.#address = this.#wallet.address.toString({ urlSafe: true, bounceable: false, testOnly: false })
     this.#path = path
-    this.#keyPair = keyPair
 
     const { tonCenterUrl, tonCenterSecretKey, tonApiUrl, tonApiSecretKey } = config
 
@@ -142,8 +145,8 @@ export default class WalletAccountTon {
    */
   get keyPair () {
     return {
-      publicKey: Buffer.from(this.#keyPair.publicKey).toString('hex'),
-      privateKey: Buffer.from(this.#keyPair.privateKey).toString('hex')
+      publicKey: this.#publicKeyBuffer,
+      privateKey: this.#privateKeyBuffer
     }
   }
 
@@ -165,7 +168,7 @@ export default class WalletAccountTon {
   async sign (message) {
     const _message = Buffer.from(message)
 
-    return sign(_message, this.#keyPair.privateKey)
+    return sign(_message, this.#secretKeyBuffer)
       .toString('hex')
   }
 
@@ -180,14 +183,14 @@ export default class WalletAccountTon {
     const _message = Buffer.from(message)
     const _signature = Buffer.from(signature, 'hex')
 
-    return signVerify(_message, _signature, this.#keyPair.publicKey)
+    return signVerify(_message, _signature, this.#publicKeyBuffer)
   }
 
   /**
    * Quotes a transaction.
    *
    * @param {TonTransaction} tx - The transaction to quote.
-   * @returns {Promise<number>} - The transaction’s fee (in nanotons).
+   * @returns {Promise<number>} - The transaction's fee (in nanotons).
    */
   async quoteTransaction ({ to, value, bounceable }) {
     /* eslint-disable camelcase */
@@ -198,8 +201,10 @@ export default class WalletAccountTon {
 
     const { transfer } = await this.#getTransfer({ to, value, bounceable })
 
+    // eslint-disable-next-line camelcase
     const { source_fees: { in_fwd_fee, storage_fee, gas_fee, fwd_fee } } = await this.#tonCenter.estimateExternalMessageFee(this.#wallet.address, { body: transfer })
 
+    // eslint-disable-next-line camelcase
     return in_fwd_fee + storage_fee + gas_fee + fwd_fee
   }
 
@@ -272,7 +277,7 @@ export default class WalletAccountTon {
     })
 
     const transfer = contract.createTransfer({
-      secretKey: this.#keyPair.privateKey,
+      secretKey: this.#secretKeyBuffer,
       seqno: await contract.getSeqno(),
       sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
       messages: [message]
@@ -311,11 +316,20 @@ export default class WalletAccountTon {
     return cell.hash()
   }
 
-  static #deriveKeyPair (seedPhrase, hdPath) {
-    const seed = bip39.mnemonicToSeedSync(seedPhrase)
-    const { privateKey } = bip32.fromSeed(seed).derivePath(hdPath)
-    const keyPair = nacl.sign.keyPair.fromSeed(privateKey)
+  /**
+   * Disposes the wallet account, erasing all buffers.
+  */
+  dispose () {
+    this.#wallet = null
+    this.#address = null
+    this.#path = null
 
-    return { privateKey: keyPair.secretKey, publicKey: keyPair.publicKey }
+    sodium.sodium_memzero(this.#secretKeyBuffer)
+    sodium.sodium_memzero(this.#publicKeyBuffer)
+    sodium.sodium_memzero(this.#privateKeyBuffer)
+
+    this.#secretKeyBuffer = null
+    this.#publicKeyBuffer = null
+    this.#privateKeyBuffer = null
   }
 }

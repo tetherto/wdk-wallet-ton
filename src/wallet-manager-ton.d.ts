@@ -16,16 +16,16 @@ export default class WalletManagerTon {
     /**
      * Creates a new wallet manager for the ton blockchain.
      *
-     * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+     * @param {Uint8Array} seedBuffer - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
      * @param {TonWalletConfig} [config] - The configuration object.
      */
-    constructor(seedPhrase: string, config?: TonWalletConfig);
+    constructor(seedBuffer: Uint8Array, config?: TonWalletConfig);
     /**
-    * The seed phrase of the wallet.
+    * The seed of the wallet.
     *
-    * @type {string}
+    * @type {Uint8Array}
     */
-    get seedPhrase(): string;
+    get seedBuffer(): Uint8Array;
     /**
      * Returns the wallet account at a specific index (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
      *
@@ -52,6 +52,10 @@ export default class WalletManagerTon {
         normal: number;
         fast: number;
     }>;
+    /**
+     * Disposes the wallet manager, erasing the seed buffer.
+     */
+    dispose(): void;
     #private;
 }
 export type TonWalletConfig = import("./wallet-account-ton.js").TonWalletConfig;

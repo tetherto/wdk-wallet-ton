@@ -15,27 +15,26 @@
 
 import { TonApiClient } from '@ton-api/client'
 import * as bip39 from 'bip39'
+import sodium from 'sodium-universal'
 import WalletAccountTon from './wallet-account-ton.js'
 
 /** @typedef {import('./wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
 
 export default class WalletManagerTon {
-  #seedPhrase
+  #seedBuffer
   #config
   #tonApi
+  #accounts
 
   /**
    * Creates a new wallet manager for the ton blockchain.
    *
-   * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+   * @param {Uint8Array} seedBuffer - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
    * @param {TonWalletConfig} [config] - The configuration object.
    */
-  constructor (seedPhrase, config = {}) {
-    if (!WalletManagerTon.isValidSeedPhrase(seedPhrase)) {
-      throw new Error('The seed phrase is invalid.')
-    }
-
-    this.#seedPhrase = seedPhrase
+  constructor (seedBuffer, config = {}) {
+    this.#seedBuffer = seedBuffer
+    this.#accounts = new Set()
 
     this.#config = config
 
@@ -79,12 +78,12 @@ export default class WalletManagerTon {
   }
 
   /**
-  * The seed phrase of the wallet.
+  * The seed of the wallet.
   *
-  * @type {string}
+  * @type {Uint8Array}
   */
-  get seedPhrase () {
-    return this.#seedPhrase
+  get seedBuffer () {
+    return this.#seedBuffer
   }
 
   /**
@@ -97,7 +96,8 @@ export default class WalletManagerTon {
    * @returns {Promise<WalletAccountTon>} The account.
    */
   async getAccount (index = 0) {
-    return await this.getAccountByPath(`0'/0/${index}`)
+    const account = await this.getAccountByPath(`0'/0/${index}`)
+    return account
   }
 
   /**
@@ -107,7 +107,9 @@ export default class WalletManagerTon {
    * @returns {Promise<WalletAccountTon>} The account.
    */
   async getAccountByPath (path) {
-    return new WalletAccountTon(this.#seedPhrase, path, this.#config)
+    const account = new WalletAccountTon(this.#seedBuffer, path, this.#config)
+    this.#accounts.add(account)
+    return account
   }
 
   /**
@@ -122,13 +124,26 @@ export default class WalletManagerTon {
       throw new Error('The wallet must be connected to the ton api to fetch fee rates.')
     }
 
-    const { config: { config_param21 } } = await this.#tonApi.blockchain.getRawBlockchainConfig()
-    const gasPriceBasechainRaw = config_param21.gas_limits_prices.gas_flat_pfx.other.gas_prices_ext.gas_price
+    const { config } = await this.#tonApi.blockchain.getRawBlockchainConfig()
+    const gasPriceBasechainRaw = config.config_param21.gas_limits_prices.gas_flat_pfx.other.gas_prices_ext.gas_price
     const gasPriceBasechain = Math.round(gasPriceBasechainRaw / 65536)
 
     return {
       normal: gasPriceBasechain,
       fast: gasPriceBasechain
     }
+  }
+
+  /**
+   * Disposes the wallet manager, erasing the seed buffer.
+   */
+  dispose () {
+    for (const account of this.#accounts) account.dispose()
+    this.#accounts.clear()
+
+    sodium.sodium_memzero(this.#seedBuffer)
+
+    this.#config = null
+    this.#tonApi = null
   }
 }
