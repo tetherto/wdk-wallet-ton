@@ -24,6 +24,10 @@ import ecc from '@bitcoinerlab/secp256k1'
 import nacl from 'tweetnacl'
 import * as bip39 from 'bip39'
 
+/** @typedef {import('@ton/ton').TonClient} TonClient */
+
+/** @typedef {import('@ton-api/client').TonApiClient} TonApiClient */
+
 /**
  * @typedef {Object} KeyPair
  * @property {string} publicKey - The public key.
@@ -39,10 +43,10 @@ import * as bip39 from 'bip39'
 
 /**
  * @typedef {Object} TonWalletConfig
- * @property {string | TonApiClient} [tonApiUrl] - The url of ton api, or a instance of the {@link TonApiClient} class.
- * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
- * @property {string | TonClient } [tonCenterUrl] - The ton center api's url, or a instance of the {@link TonClient} class.
+ * @property {string | TonClient} [tonCenterUrl] - The url of the ton center api, or a instance of the {@link TonClient} class.
  * @property {string} [tonCenterSecretKey] - The api-key to use to authenticate on the ton center api.
+ * @property {string | TonApiClient} [tonApiUrl] - The url of the ton api, or a instance of the {@link TonApiClient} class.
+ * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
  */
 
 const bip32 = BIP32Factory(ecc)
@@ -56,7 +60,7 @@ export default class WalletAccountTon {
   #keyPair
 
   #tonCenter
-  #client
+  #tonApi
   #contractAdapter
 
   /**
@@ -73,27 +77,43 @@ export default class WalletAccountTon {
     this.#address = this.#wallet.address.toString({ urlSafe: true, bounceable: false, testOnly: false })
     this.#path = path
     this.#keyPair = keyPair
-    this.#tonCenter = config.tonCenter
-    this.#client = config.tonApi
 
     const { tonCenterUrl, tonCenterSecretKey, tonApiUrl, tonApiSecretKey } = config
 
-    if (!this.#tonCenter && tonCenterUrl && tonCenterSecretKey) {
-      this.#tonCenter = new TonClient({
-        endpoint: tonCenterUrl,
-        apiKey: tonCenterSecretKey
-      })
+    if (tonCenterUrl) {
+      if (typeof tonCenterUrl === 'string') {
+        if (!tonCenterSecretKey) {
+          throw new Error('You must also provide a valid secret key to connect the wallet to the ton center api.')
+        }
+
+        this.#tonCenter = new TonClient({
+          endpoint: tonCenterUrl,
+          apiKey: tonCenterSecretKey
+        })
+      }
+
+      if (tonCenterUrl instanceof TonClient) {
+        this.#tonCenter = tonCenterUrl
+      }
     }
 
-    if (!this.#client && tonApiUrl && tonApiSecretKey) {
-      this.#client = new TonApiClient({
-        baseUrl: tonApiUrl,
-        apiKey: tonApiSecretKey
-      })
-    }
+    if (tonApiUrl) {
+      if (typeof tonApiUrl === 'string') {
+        if (!tonApiSecretKey) {
+          throw new Error('You must also provide a valid secret key to connect the wallet to the ton api.')
+        }
 
-    if (this.#client) {
-      this.#contractAdapter = new ContractAdapter(this.#client)
+        this.#tonApi = new TonApiClient({
+          baseUrl: tonApiUrl,
+          apiKey: tonApiSecretKey
+        })
+      }
+
+      if (tonApiUrl instanceof TonApiClient) {
+        this.#tonApi = tonApiUrl
+      }
+
+      this.#contractAdapter = new ContractAdapter(this.#tonApi)
     }
   }
 
@@ -170,6 +190,8 @@ export default class WalletAccountTon {
    * @returns {Promise<number>} - The transaction’s fee (in nanotons).
    */
   async quoteTransaction ({ to, value, bounceable }) {
+    /* eslint-disable camelcase */
+
     if (!this.#tonCenter) {
       throw new Error('The wallet must be connected to the ton center api to quote transactions.')
     }
@@ -221,13 +243,13 @@ export default class WalletAccountTon {
    * @returns {Promise<number>} The token balance.
    */
   async getTokenBalance (tokenAddress) {
-    if (!this.#client) {
+    if (!this.#tonApi) {
       throw new Error('The wallet must be connected to the ton api to get token balances.')
     }
 
     const jettonWalletAddress = await this.#getJettonWalletAddress(tokenAddress)
 
-    const { decoded: { balance } } = await this.#client.blockchain
+    const { decoded: { balance } } = await this.#tonApi.blockchain
       .execGetMethodForBlockchainAccount(jettonWalletAddress, 'get_wallet_data')
 
     return Number(balance)
@@ -262,7 +284,7 @@ export default class WalletAccountTon {
   async #getJettonWalletAddress (tokenAddress) {
     const jettonAddress = Address.parse(tokenAddress)
 
-    const response = await this.#client.blockchain.execGetMethodForBlockchainAccount(
+    const response = await this.#tonApi.blockchain.execGetMethodForBlockchainAccount(
       jettonAddress,
       'get_wallet_address',
       { args: [this.#address] }

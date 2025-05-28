@@ -73,6 +73,8 @@ export default class WalletAccountTon {
     getTokenBalance(tokenAddress: string): Promise<number>;
     #private;
 }
+export type TonClient = import('@ton/ton').TonClient;
+export type TonApiClient = import('@ton-api/client').TonApiClient;
 export type KeyPair = {
     /**
      * - The public key.
@@ -99,19 +101,19 @@ export type TonTransaction = {
 };
 export type TonWalletConfig = {
     /**
-     * - The url of ton api, or a instance of the {@link TonApiClient} class.
-     */
-    tonApiUrl?: string | TonApiClient;
-    /**
-     * - The api-key to use to authenticate on the ton api.
-     */
-    tonApiSecretKey?: string;
-    /**
-     * - The ton center api's url, or a instance of the {@link TonClient} class.
+     * - The url of the ton center api, or a instance of the {@link TonClient} class.
      */
     tonCenterUrl?: string | TonClient;
     /**
      * - The api-key to use to authenticate on the ton center api.
      */
     tonCenterSecretKey?: string;
+    /**
+     * - The url of the ton api, or a instance of the {@link TonApiClient} class.
+     */
+    tonApiUrl?: string | TonApiClient;
+    /**
+     * - The api-key to use to authenticate on the ton api.
+     */
+    tonApiSecretKey?: string;
 };
