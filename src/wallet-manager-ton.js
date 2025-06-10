@@ -22,7 +22,7 @@ import WalletAccountTon from './wallet-account-ton.js'
 export default class WalletManagerTon {
   #seedPhrase
   #config
-  #client
+  #tonApi
 
   /**
    * Creates a new wallet manager for the ton blockchain.
@@ -41,11 +41,21 @@ export default class WalletManagerTon {
 
     const { tonApiUrl, tonApiSecretKey } = config
 
-    if (tonApiUrl && tonApiSecretKey) {
-      this.#client = new TonApiClient({
-        baseUrl: tonApiUrl,
-        apiKey: tonApiSecretKey
-      })
+    if (tonApiUrl) {
+      if (typeof tonApiUrl === 'string') {
+        if (!tonApiSecretKey) {
+          throw new Error('You must also provide a valid secret key to connect the wallet to the ton api.')
+        }
+
+        this.#tonApi = new TonApiClient({
+          baseUrl: tonApiUrl,
+          apiKey: tonApiSecretKey
+        })
+      }
+
+      if (tonApiUrl instanceof TonApiClient) {
+        this.#tonApi = tonApiUrl
+      }
     }
   }
 
@@ -106,11 +116,13 @@ export default class WalletManagerTon {
    * @returns {Promise<{ normal: number, fast: number }>} The fee rates (in nanotons).
    */
   async getFeeRates () {
-    if (!this.#client) {
+    /* eslint-disable camelcase */
+
+    if (!this.#tonApi) {
       throw new Error('The wallet must be connected to the ton api to fetch fee rates.')
     }
 
-    const { config: { config_param21 } } = await this.#client.blockchain.getRawBlockchainConfig()
+    const { config: { config_param21 } } = await this.#tonApi.blockchain.getRawBlockchainConfig()
     const gasPriceBasechainRaw = config_param21.gas_limits_prices.gas_flat_pfx.other.gas_prices_ext.gas_price
     const gasPriceBasechain = Math.round(gasPriceBasechainRaw / 65536)
 
