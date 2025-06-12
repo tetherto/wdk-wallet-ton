@@ -17,7 +17,8 @@
     "@ton/ton": "15.2.1",
     "bip39": "3.1.0",
     "micro-key-producer": "^0.7.6",
-    "sodium-universal": "5.0.1"
+    "sodium-universal": "5.0.1",
+    "tweetnacl": "1.0.3"
   },
   "devDependencies": {
     "rimraf": "6.0.1",

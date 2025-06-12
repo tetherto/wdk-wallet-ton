@@ -19,6 +19,7 @@ import { Address, WalletContractV5R1, internal, TonClient, SendMode } from '@ton
 import { TonApiClient } from '@ton-api/client'
 import { ContractAdapter } from '@ton-api/ton-adapter'
 
+import nacl from 'tweetnacl'
 import HDKey from 'micro-key-producer/slip10.js'
 
 // eslint-disable-next-line camelcase
@@ -55,13 +56,10 @@ const BIP_44_TON_DERIVATION_PATH_PREFIX = "m/44'/607'"
 
 function derivePath (seed, path) {
   const hdKey = HDKey.fromMasterSeed(seed)
+  const { privateKey } = hdKey.derive(path, true)
+  const keyPair = nacl.sign.keyPair.fromSeed(privateKey)
 
-  const { privateKey, publicKeyRaw } = hdKey.derive(path, true)
-
-  return { 
-    privateKey,
-    publicKey: publicKeyRaw
-  }
+  return keyPair
 }
 
 export default class WalletAccountTon {
@@ -162,7 +160,7 @@ export default class WalletAccountTon {
   get keyPair () {
     return {
       publicKey: this.#keyPair.publicKey,
-      privateKey: this.#keyPair.privateKey
+      privateKey: this.#keyPair.secretKey
     }
   }
 
@@ -184,7 +182,7 @@ export default class WalletAccountTon {
   async sign (message) {
     const _message = Buffer.from(message)
 
-    return sign(_message, this.#keyPair.privateKey)
+    return sign(_message, this.#keyPair.secretKey)
       .toString('hex')
   }
 
@@ -291,7 +289,7 @@ export default class WalletAccountTon {
     })
 
     const transfer = contract.createTransfer({
-      secretKey: this.#keyPair.privateKey,
+      secretKey: this.#keyPair.secretKey,
       seqno: await contract.getSeqno(),
       sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
       messages: [message]
@@ -334,8 +332,8 @@ export default class WalletAccountTon {
    * Disposes the wallet account, erasing the private key from the memory.
    */
   dispose () {
-    sodium_memzero(this.#keyPair.privateKey)
+    sodium_memzero(this.#keyPair.secretKey)
 
-    this.#keyPair.privateKey = undefined
+    this.#keyPair.secretKey = undefined
   }
 }
