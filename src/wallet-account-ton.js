@@ -277,7 +277,7 @@ export default class WalletAccountTon {
 
     const args = [{
       type: 'slice',
-      cell: beginCell().storeAddress(this.#address).endCell()
+      cell: beginCell().storeAddress(Address.parse(this.#address)).endCell()
     }];
 
     const { stack } = await this.#tonClient.callGetMethod(address, 'get_wallet_address', args);
