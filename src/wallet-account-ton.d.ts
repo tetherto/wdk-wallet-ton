@@ -1,10 +1,10 @@
 export default class WalletAccountTon {
     /**
-     * @param {Uint8Array} seedBuffer - Uint8Array seedBuffer buffer.
+     * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
      * @param {string} path - The BIP-44 derivation path (e.g. "0'/0/0").
      * @param {TonWalletConfig} [config] - The configuration object.
      */
-    constructor(seedBuffer: Uint8Array, path: string, config?: TonWalletConfig);
+    constructor(seed: string | Uint8Array, path: string, config?: TonWalletConfig);
     /**
      * The derivation path's index of this account.
      *
@@ -72,13 +72,23 @@ export default class WalletAccountTon {
      */
     getTokenBalance(tokenAddress: string): Promise<number>;
     /**
-     * Disposes the wallet account, erasing all buffers.
-    */
+     * Disposes the wallet account, erasing the private key from the memory.
+     */
     dispose(): void;
     #private;
 }
 export type TonClient = import('@ton/ton').TonClient;
 export type TonApiClient = import('@ton-api/client').TonApiClient;
+export type KeyPair = {
+    /**
+     * - The public key.
+     */
+    publicKey: Uint8Array;
+    /**
+     * - The private key.
+     */
+    privateKey: Uint8Array;
+};
 export type TonTransaction = {
     /**
      * - The transaction's recipient.
@@ -110,14 +120,4 @@ export type TonWalletConfig = {
      * - The api-key to use to authenticate on the ton api.
      */
     tonApiSecretKey?: string;
-};
-export type KeyPair = {
-    /**
-     * - The public key.
-     */
-    publicKey: Uint8Array;
-    /**
-     * - The private key.
-     */
-    privateKey: Uint8Array;
 };

@@ -16,16 +16,16 @@ export default class WalletManagerTon {
     /**
      * Creates a new wallet manager for the ton blockchain.
      *
-     * @param {Uint8Array} seedBuffer - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+     * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
      * @param {TonWalletConfig} [config] - The configuration object.
      */
-    constructor(seedBuffer: Uint8Array, config?: TonWalletConfig);
+    constructor(seed: string | Uint8Array, config?: TonWalletConfig);
     /**
-    * The seed of the wallet.
+    * The seed phrase of the wallet.
     *
     * @type {Uint8Array}
     */
-    get seedBuffer(): Uint8Array;
+    get seed(): Uint8Array;
     /**
      * Returns the wallet account at a specific index (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
      *
@@ -39,6 +39,9 @@ export default class WalletManagerTon {
     /**
      * Returns the wallet account at a specific BIP-44 derivation path.
      *
+     * @example
+     * // Returns the account with derivation path m/44'/607'/0'/0/1
+     * const account = await wallet.getAccountByPath("0'/0/1");
      * @param {string} path - The derivation path (e.g. "0'/0/0").
      * @returns {Promise<WalletAccountTon>} The account.
      */
@@ -53,7 +56,7 @@ export default class WalletManagerTon {
         fast: number;
     }>;
     /**
-     * Disposes the wallet manager, erasing the seed buffer.
+     * Disposes all the wallet accounts, erasing their private keys from the memory.
      */
     dispose(): void;
     #private;
