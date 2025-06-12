@@ -162,7 +162,7 @@ export default class WalletAccountTon {
   get keyPair () {
     return {
       publicKey: this.#keyPair.publicKey,
-      privateKey: this.#keyPair.secretKey
+      privateKey: this.#keyPair.privateKey
     }
   }
 
@@ -184,7 +184,7 @@ export default class WalletAccountTon {
   async sign (message) {
     const _message = Buffer.from(message)
 
-    return sign(_message, this.#keyPair.secretKey)
+    return sign(_message, this.#keyPair.privateKey)
       .toString('hex')
   }
 
@@ -291,7 +291,7 @@ export default class WalletAccountTon {
     })
 
     const transfer = contract.createTransfer({
-      secretKey: this.#keyPair.secretKey,
+      secretKey: this.#keyPair.privateKey,
       seqno: await contract.getSeqno(),
       sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
       messages: [message]
@@ -334,8 +334,8 @@ export default class WalletAccountTon {
    * Disposes the wallet account, erasing the private key from the memory.
    */
   dispose () {
-    sodium_memzero(this.#keyPair.secretKey)
+    sodium_memzero(this.#keyPair.privateKey)
 
-    this.#keyPair.secretKey = undefined
+    this.#keyPair.privateKey = undefined
   }
 }
