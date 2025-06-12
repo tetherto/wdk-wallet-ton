@@ -19,9 +19,7 @@ import { Address, WalletContractV5R1, internal, TonClient, SendMode } from '@ton
 import { TonApiClient } from '@ton-api/client'
 import { ContractAdapter } from '@ton-api/ton-adapter'
 
-import nacl from 'tweetnacl'
-import ecc from '@bitcoinerlab/secp256k1'
-import { BIP32Factory } from 'bip32'
+import HDKey from 'micro-key-producer/slip10.js'
 
 // eslint-disable-next-line camelcase
 import { sodium_memzero } from 'sodium-universal'
@@ -53,9 +51,18 @@ import * as bip39 from 'bip39'
  * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
  */
 
-const bip32 = BIP32Factory(ecc)
-
 const BIP_44_TON_DERIVATION_PATH_PREFIX = "m/44'/607'"
+
+function derivePath (seed, path) {
+  const hdKey = HDKey.fromMasterSeed(seed)
+
+  const { privateKey, publicKeyRaw } = hdKey.derive(path, true)
+
+  return { 
+    privateKey,
+    publicKey: publicKeyRaw
+  }
+}
 
 export default class WalletAccountTon {
   #wallet
@@ -83,7 +90,7 @@ export default class WalletAccountTon {
 
     path = BIP_44_TON_DERIVATION_PATH_PREFIX + '/' + path
 
-    const keyPair = WalletAccountTon.#deriveKeyPair(seed, path)
+    const keyPair = derivePath(seed, path)
 
     this.#wallet = WalletContractV5R1.create({ workchain: 0, publicKey: keyPair.publicKey })
     this.#address = this.#wallet.address.toString({ urlSafe: true, bounceable: false, testOnly: false })
@@ -330,13 +337,5 @@ export default class WalletAccountTon {
     sodium_memzero(this.#keyPair.secretKey)
 
     this.#keyPair.secretKey = undefined
-  }
-
-  static #deriveKeyPair (seed, path) {
-    const { privateKey } = bip32.fromSeed(seed).derivePath(path)
-    const keyPair = nacl.sign.keyPair.fromSeed(privateKey)
-    sodium_memzero(privateKey)
-
-    return keyPair
   }
 }
