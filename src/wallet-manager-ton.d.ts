@@ -1,4 +1,3 @@
-/** @typedef {import('./wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
 export default class WalletManagerTon {
     /**
      * Returns a random [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.

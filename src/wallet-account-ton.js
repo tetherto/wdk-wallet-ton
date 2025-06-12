@@ -13,11 +13,9 @@
 // limitations under the License.
 'use strict'
 
-import { beginCell, fromNano } from '@ton/core'
 import { sign, signVerify } from '@ton/crypto'
-import { Address, WalletContractV5R1, internal, TonClient, SendMode } from '@ton/ton'
-import { TonApiClient } from '@ton-api/client'
-import { ContractAdapter } from '@ton-api/ton-adapter'
+
+import { Address, beginCell, fromNano, internal, SendMode, TonClient, WalletContractV5R1 } from '@ton/ton'
 
 import nacl from 'tweetnacl'
 import HDKey from 'micro-key-producer/slip10.js'
@@ -28,8 +26,6 @@ import { sodium_memzero } from 'sodium-universal'
 import * as bip39 from 'bip39'
 
 /** @typedef {import('@ton/ton').TonClient} TonClient */
-
-/** @typedef {import('@ton-api/client').TonApiClient} TonApiClient */
 
 /**
  * @typedef {Object} KeyPair
@@ -48,8 +44,6 @@ import * as bip39 from 'bip39'
  * @typedef {Object} TonWalletConfig
  * @property {string | TonClient} [tonCenterUrl] - The url of the ton center api, or a instance of the {@link TonClient} class.
  * @property {string} [tonCenterSecretKey] - The api-key to use to authenticate on the ton center api.
- * @property {string | TonApiClient} [tonApiUrl] - The url of the ton api, or a instance of the {@link TonApiClient} class.
- * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
  */
 
 const BIP_44_TON_DERIVATION_PATH_PREFIX = "m/44'/607'"
@@ -68,9 +62,7 @@ export default class WalletAccountTon {
   #path
   #keyPair
 
-  #tonCenter
-  #tonApi
-  #contractAdapter
+  #tonClient
 
   /**
    * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
@@ -95,7 +87,7 @@ export default class WalletAccountTon {
     this.#path = path
     this.#keyPair = keyPair
 
-    const { tonCenterUrl, tonCenterSecretKey, tonApiUrl, tonApiSecretKey } = config
+    const { tonCenterUrl, tonCenterSecretKey } = config
 
     if (tonCenterUrl) {
       if (typeof tonCenterUrl === 'string') {
@@ -103,34 +95,15 @@ export default class WalletAccountTon {
           throw new Error('You must also provide a valid secret key to connect the wallet to the ton center api.')
         }
 
-        this.#tonCenter = new TonClient({
+        this.#tonClient = new TonClient({
           endpoint: tonCenterUrl,
           apiKey: tonCenterSecretKey
         })
       }
 
       if (tonCenterUrl instanceof TonClient) {
-        this.#tonCenter = tonCenterUrl
+        this.#tonClient = tonCenterUrl
       }
-    }
-
-    if (tonApiUrl) {
-      if (typeof tonApiUrl === 'string') {
-        if (!tonApiSecretKey) {
-          throw new Error('You must also provide a valid secret key to connect the wallet to the ton api.')
-        }
-
-        this.#tonApi = new TonApiClient({
-          baseUrl: tonApiUrl,
-          apiKey: tonApiSecretKey
-        })
-      }
-
-      if (tonApiUrl instanceof TonApiClient) {
-        this.#tonApi = tonApiUrl
-      }
-
-      this.#contractAdapter = new ContractAdapter(this.#tonApi)
     }
   }
 
@@ -206,16 +179,16 @@ export default class WalletAccountTon {
    * @param {TonTransaction} tx - The transaction to quote.
    * @returns {Promise<number>} - The transaction's fee (in nanotons).
    */
-  async quoteTransaction ({ to, value, bounceable }) {
+  async quoteTransaction (tx) {
     /* eslint-disable camelcase */
 
-    if (!this.#tonCenter) {
-      throw new Error('The wallet must be connected to the ton center api to quote transactions.')
+    if (!this.#tonClient) {
+      throw new Error('The wallet must be connected to ton center to quote transactions.')
     }
 
-    const { transfer } = await this.#getTransfer({ to, value, bounceable })
-
-    const { source_fees: { in_fwd_fee, storage_fee, gas_fee, fwd_fee } } = await this.#tonCenter.estimateExternalMessageFee(this.#wallet.address, { body: transfer })
+    const { transfer } = await this.#getTransfer(tx)
+    const { source_fees } = await this.#tonClient.estimateExternalMessageFee(this.#wallet.address, { body: transfer })
+    const { in_fwd_fee, storage_fee, gas_fee, fwd_fee } = source_fees
 
     return in_fwd_fee + storage_fee + gas_fee + fwd_fee
   }
@@ -226,12 +199,16 @@ export default class WalletAccountTon {
    * @param {TonTransaction} tx - The transaction to send.
    * @returns {Promise<string>} The transaction's hash.
    */
-  async sendTransaction ({ to, value, bounceable }) {
-    const { contract, transfer, message } = await this.#getTransfer({ to, value, bounceable })
+  async sendTransaction (tx) {
+    if (!this.#tonClient) {
+      throw new Error('The wallet must be connected to ton center to send transactions.')
+    }
+
+    const { contract, message, transfer } = await this.#getTransfer(tx)
 
     await contract.send(transfer)
 
-    const hash = this.#normalizeHash(message).toString('hex')
+    const hash = this.#getHash(message).toString('hex')
 
     return hash
   }
@@ -242,11 +219,11 @@ export default class WalletAccountTon {
    * @returns {Promise<number>} The native token balance.
    */
   async getBalance () {
-    if (!this.#contractAdapter) {
-      throw new Error('The wallet must be connected to the ton api to get balances.')
+    if (!this.#tonClient) {
+      throw new Error('The wallet must be connected to ton center to get balances.')
     }
 
-    const contract = this.#contractAdapter.open(this.#wallet)
+    const contract = this.#tonClient.open(this.#wallet)
 
     const balance = await contract.getBalance()
 
@@ -260,32 +237,29 @@ export default class WalletAccountTon {
    * @returns {Promise<number>} The token balance.
    */
   async getTokenBalance (tokenAddress) {
-    if (!this.#tonApi) {
-      throw new Error('The wallet must be connected to the ton api to get token balances.')
+    if (!this.#tonClient) {
+      throw new Error('The wallet must be connected to ton center to get token balances.')
     }
 
     const jettonWalletAddress = await this.#getJettonWalletAddress(tokenAddress)
 
-    const { decoded: { balance } } = await this.#tonApi.blockchain
-      .execGetMethodForBlockchainAccount(jettonWalletAddress, 'get_wallet_data')
+    const { stack } = await this.#tonClient.callGetMethod(jettonWalletAddress, 'get_wallet_data', [])
 
-    return Number(balance)
+    const balance = stack.readNumber()
+
+    return balance
   }
 
   async #getTransfer ({ to, value, bounceable }) {
-    if (!this.#contractAdapter) {
-      throw new Error('The wallet must be connected to the ton api to send or quote transactions.')
-    }
+    to = Address.parseFriendly(to)
 
-    const _to = Address.parseFriendly(to)
-
-    const contract = this.#contractAdapter.open(this.#wallet)
+    const contract = this.#tonClient.open(this.#wallet)
 
     const message = internal({
-      to: _to.address,
+      to: to.address,
       value: fromNano(value).toString(),
       body: 'Transfer',
-      bounce: bounceable ?? _to.isBounceable
+      bounce: bounceable ?? to.isBounceable
     })
 
     const transfer = contract.createTransfer({
@@ -299,19 +273,22 @@ export default class WalletAccountTon {
   }
 
   async #getJettonWalletAddress (tokenAddress) {
-    const jettonAddress = Address.parse(tokenAddress)
+    const address = Address.parse(tokenAddress);
 
-    const response = await this.#tonApi.blockchain.execGetMethodForBlockchainAccount(
-      jettonAddress,
-      'get_wallet_address',
-      { args: [this.#address] }
-    )
+    const args = [{
+      type: 'slice',
+      cell: beginCell().storeAddress(this.#address).endCell()
+    }];
 
-    return Address.parse(response.decoded.jetton_wallet_address)
+    const { stack } = await this.#tonClient.callGetMethod(address, 'get_wallet_address', args);
+
+    const jettonWalletAddress = stack.readAddress();
+
+    return jettonWalletAddress;
   }
 
-  #normalizeHash (message) {
-    if (message.info.type !== 'external-in') {
+  #getHash (message) {
+    if (message.info.type === 'internal') {
       return message.body.hash()
     }
 
@@ -325,7 +302,9 @@ export default class WalletAccountTon {
       .storeRef(message.body)
       .endCell()
 
-    return cell.hash()
+    const hash = cell.hash()
+
+    return hash
   }
 
   /**
