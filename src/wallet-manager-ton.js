@@ -13,31 +13,41 @@
 // limitations under the License.
 'use strict'
 
-import { TonApiClient } from '@ton-api/client'
 import * as bip39 from 'bip39'
+
+import { TonApiClient } from '@ton-api/client'
+
 import WalletAccountTon from './wallet-account-ton.js'
 
 /** @typedef {import('./wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
 
 export default class WalletManagerTon {
-  #seedPhrase
+  #seed
   #config
+  #accounts
+
   #tonApi
 
   /**
    * Creates a new wallet manager for the ton blockchain.
    *
-   * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+   * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
    * @param {TonWalletConfig} [config] - The configuration object.
    */
-  constructor (seedPhrase, config = {}) {
-    if (!WalletManagerTon.isValidSeedPhrase(seedPhrase)) {
-      throw new Error('The seed phrase is invalid.')
+  constructor (seed, config = {}) {
+    if (typeof seed === 'string') {
+      if (!WalletManagerTon.isValidSeedPhrase(seed)) {
+        throw new Error('The seed phrase is invalid.')
+      }
+
+      seed = bip39.mnemonicToSeedSync(seed)
     }
 
-    this.#seedPhrase = seedPhrase
+    this.#seed = seed
 
     this.#config = config
+
+    this.#accounts = { }
 
     const { tonApiUrl, tonApiSecretKey } = config
 
@@ -81,10 +91,10 @@ export default class WalletManagerTon {
   /**
   * The seed phrase of the wallet.
   *
-  * @type {string}
+  * @type {Uint8Array}
   */
-  get seedPhrase () {
-    return this.#seedPhrase
+  get seed () {
+    return this.#seed
   }
 
   /**
@@ -102,12 +112,21 @@ export default class WalletManagerTon {
 
   /**
    * Returns the wallet account at a specific BIP-44 derivation path.
-   *
+   * 
+   * @example
+   * // Returns the account with derivation path m/44'/607'/0'/0/1
+   * const account = await wallet.getAccountByPath("0'/0/1");
    * @param {string} path - The derivation path (e.g. "0'/0/0").
    * @returns {Promise<WalletAccountTon>} The account.
    */
   async getAccountByPath (path) {
-    return new WalletAccountTon(this.#seedPhrase, path, this.#config)
+    if (!this.#accounts[path]) {
+      const account = new WalletAccountTon(this.#seed, path, this.#config)
+
+      this.#accounts[path] = account
+    }
+
+    return this.#accounts[path]
   }
 
   /**
@@ -130,5 +149,16 @@ export default class WalletManagerTon {
       normal: gasPriceBasechain,
       fast: gasPriceBasechain
     }
+  }
+
+  /**
+   * Disposes all the wallet accounts, erasing their private keys from the memory.
+   */
+  dispose () {
+    for (const account of Object.values(this.#accounts)) {
+      account.dispose()
+    }
+
+    this.#accounts = { }
   }
 }

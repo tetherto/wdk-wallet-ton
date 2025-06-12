@@ -19,9 +19,11 @@ import { Address, WalletContractV5R1, internal, TonClient, SendMode } from '@ton
 import { TonApiClient } from '@ton-api/client'
 import { ContractAdapter } from '@ton-api/ton-adapter'
 
-import { BIP32Factory } from 'bip32'
-import ecc from '@bitcoinerlab/secp256k1'
-import nacl from 'tweetnacl'
+import HDKey from 'micro-key-producer/slip10.js'
+
+// eslint-disable-next-line camelcase
+import { sodium_memzero } from 'sodium-universal'
+
 import * as bip39 from 'bip39'
 
 /** @typedef {import('@ton/ton').TonClient} TonClient */
@@ -30,8 +32,8 @@ import * as bip39 from 'bip39'
 
 /**
  * @typedef {Object} KeyPair
- * @property {string} publicKey - The public key.
- * @property {string} privateKey - The private key.
+ * @property {Uint8Array} publicKey - The public key.
+ * @property {Uint8Array} privateKey - The private key.
  */
 
 /**
@@ -49,9 +51,18 @@ import * as bip39 from 'bip39'
  * @property {string} [tonApiSecretKey] - The api-key to use to authenticate on the ton api.
  */
 
-const bip32 = BIP32Factory(ecc)
-
 const BIP_44_TON_DERIVATION_PATH_PREFIX = "m/44'/607'"
+
+function derivePath (seed, path) {
+  const hdKey = HDKey.fromMasterSeed(seed)
+
+  const { privateKey, publicKeyRaw } = hdKey.derive(path, true)
+
+  return { 
+    privateKey,
+    publicKey: publicKeyRaw
+  }
+}
 
 export default class WalletAccountTon {
   #wallet
@@ -64,14 +75,22 @@ export default class WalletAccountTon {
   #contractAdapter
 
   /**
-   * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+   * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
    * @param {string} path - The BIP-44 derivation path (e.g. "0'/0/0").
    * @param {TonWalletConfig} [config] - The configuration object.
    */
-  constructor (seedPhrase, path, config = {}) {
-    path = `${BIP_44_TON_DERIVATION_PATH_PREFIX}/${path}`
+  constructor (seed, path, config = {}) {
+    if (typeof seed === 'string') {
+      if (!bip39.validateMnemonic(seed)) {
+        throw new Error('The seed phrase is invalid.')
+      }
 
-    const keyPair = WalletAccountTon.#deriveKeyPair(seedPhrase, path)
+      seed = bip39.mnemonicToSeedSync(seed)
+    }
+
+    path = BIP_44_TON_DERIVATION_PATH_PREFIX + '/' + path
+
+    const keyPair = derivePath(seed, path)
 
     this.#wallet = WalletContractV5R1.create({ workchain: 0, publicKey: keyPair.publicKey })
     this.#address = this.#wallet.address.toString({ urlSafe: true, bounceable: false, testOnly: false })
@@ -142,8 +161,8 @@ export default class WalletAccountTon {
    */
   get keyPair () {
     return {
-      publicKey: Buffer.from(this.#keyPair.publicKey).toString('hex'),
-      privateKey: Buffer.from(this.#keyPair.privateKey).toString('hex')
+      publicKey: this.#keyPair.publicKey,
+      privateKey: this.#keyPair.privateKey
     }
   }
 
@@ -187,7 +206,7 @@ export default class WalletAccountTon {
    * Quotes a transaction.
    *
    * @param {TonTransaction} tx - The transaction to quote.
-   * @returns {Promise<number>} - The transaction’s fee (in nanotons).
+   * @returns {Promise<number>} - The transaction's fee (in nanotons).
    */
   async quoteTransaction ({ to, value, bounceable }) {
     /* eslint-disable camelcase */
@@ -311,11 +330,12 @@ export default class WalletAccountTon {
     return cell.hash()
   }
 
-  static #deriveKeyPair (seedPhrase, hdPath) {
-    const seed = bip39.mnemonicToSeedSync(seedPhrase)
-    const { privateKey } = bip32.fromSeed(seed).derivePath(hdPath)
-    const keyPair = nacl.sign.keyPair.fromSeed(privateKey)
+  /**
+   * Disposes the wallet account, erasing the private key from the memory.
+   */
+  dispose () {
+    sodium_memzero(this.#keyPair.privateKey)
 
-    return { privateKey: keyPair.secretKey, publicKey: keyPair.publicKey }
+    this.#keyPair.privateKey = undefined
   }
 }
