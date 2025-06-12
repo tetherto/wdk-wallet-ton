@@ -1,10 +1,38 @@
-export default class WalletAccountTon {
+/** @implements {IWalletAccount} */
+export default class WalletAccountTon implements IWalletAccount {
     /**
      * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
      * @param {string} path - The BIP-44 derivation path (e.g. "0'/0/0").
      * @param {TonWalletConfig} [config] - The configuration object.
      */
     constructor(seed: string | Uint8Array, path: string, config?: TonWalletConfig);
+    /**
+     * The TON wallet account configuration.
+     *
+     * @protected
+     * @type {TonWalletConfig}
+     */
+    protected _config: TonWalletConfig;
+    /**
+     * The V5R1 wallet contract TON.
+     *
+     * @type {WalletContractV5R1}
+     * @protected
+     */
+    protected _wallet: WalletContractV5R1;
+    /** @private */
+    private _address;
+    /** @private */
+    private _path;
+    /** @private */
+    private _keyPair;
+    /**
+     * The ton center client.
+     *
+     * @type {TonClient}
+     * @protected
+     */
+    protected _tonClient: TonClient;
     /**
      * The derivation path's index of this account.
      *
@@ -45,19 +73,33 @@ export default class WalletAccountTon {
      */
     verify(message: string, signature: string): Promise<boolean>;
     /**
-     * Quotes a transaction.
+     * Quotes the costs of a send transaction operation.
      *
-     * @param {TonTransaction} tx - The transaction to quote.
-     * @returns {Promise<number>} - The transaction's fee (in nanotons).
+     * @param {TonTransaction} tx - The transaction.
+     * @returns {Promise<Omit<TransactionResult, 'hash'>>} The send transaction’s quotes.
      */
-    quoteTransaction(tx: TonTransaction): Promise<number>;
+    quoteSendTransaction({ to, value, bounceable }: TonTransaction): Promise<Omit<TransactionResult, "hash">>;
     /**
-     * Sends a transaction with arbitrary data.
+     * Sends a transaction.
      *
-     * @param {TonTransaction} tx - The transaction to send.
-     * @returns {Promise<string>} The transaction's hash.
+     * @param {TonTransaction} tx - The transaction.
+     * @returns {Promise<TransactionResult>} The send transaction’s result.
      */
-    sendTransaction(tx: TonTransaction): Promise<string>;
+    sendTransaction({ to, value, bounceable }: TonTransaction): Promise<TransactionResult>;
+    /**
+     * Quotes the costs of a transfer operation.
+     *
+     * @param {TransferOptions} options - The transfer's options.
+     * @returns {Promise<Omit<TransferResult, 'hash'>>} The transfer's quotes.
+     */
+    quoteTransfer({ recipient, amount, token }: TransferOptions): Promise<Omit<TransferResult, "hash">>;
+    /**
+     * Transfers a token to another address.
+     *
+     * @param {TransferOptions} options - The transfer's options.
+     * @returns {Promise<TransferResult>} The transfer's result.
+     */
+    transfer({ recipient, amount, token }: TransferOptions): Promise<TransferResult>;
     /**
      * Returns the account's native token balance.
      *
@@ -71,37 +113,39 @@ export default class WalletAccountTon {
      * @returns {Promise<number>} The token balance.
      */
     getTokenBalance(tokenAddress: string): Promise<number>;
+    /** @private */
+    private _getFeeForTransfer;
+    /** @private */
+    private _buildTransfer;
+    /** @private */
+    private _buildTransaction;
     /**
-     * Disposes the wallet account, erasing the private key from the memory.
+     * Returns the Jetton wallet address for a given Jetton token address using its owner address.
+     *
+     * @param {string} - The jetton token address
+     * @returns {Address} The Jetton wallet address.
+     * @protected
      */
+    protected _getJettonWalletAddress(tokenAddress: any): Address;
+    /**
+     * Returns the hash for a message.
+     *
+     * @param {MessageRelaxed} - The message to compute the hash.
+     * @returns {string}
+     * @protected
+     */
+    protected _getHash(message: any): string;
     dispose(): void;
-    #private;
 }
-export type TonClient = import('@ton/ton').TonClient;
-export type KeyPair = {
-    /**
-     * - The public key.
-     */
-    publicKey: Uint8Array;
-    /**
-     * - The private key.
-     */
-    privateKey: Uint8Array;
-};
-export type TonTransaction = {
-    /**
-     * - The transaction's recipient.
-     */
-    to: string;
-    /**
-     * - The amount of tons to send to the recipient (in nanotons).
-     */
-    value: number;
-    /**
-     * - If set, overrides the bounceability of the transaction.
-     */
-    bounceable?: boolean;
-};
+export type IWalletAccount = any;
+export type KeyPair = import("@wdk/wallet").KeyPair;
+export type Transaction = import("@wdk/wallet").Transaction;
+export type TransactionResult = import("@wdk/wallet").TransactionResult;
+export type TransferOptions = import("@wdk/wallet").TransferOptions;
+export type TransferResult = import("@wdk/wallet").TransferResult;
+export type TonClient = any;
+export type MessageRelaxed = import("@ton/ton").MessageRelaxed;
+export type TonTransaction = any;
 export type TonWalletConfig = {
     /**
      * - The url of the ton center api, or a instance of the {@link TonClient} class.
@@ -112,3 +156,6 @@ export type TonWalletConfig = {
      */
     tonCenterSecretKey?: string;
 };
+import { WalletContractV5R1 } from '@ton/ton';
+import { TonClient } from '@ton/ton';
+import { Address } from '@ton/ton';

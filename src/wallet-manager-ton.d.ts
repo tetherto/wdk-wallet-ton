@@ -1,18 +1,5 @@
 export default class WalletManagerTon {
     /**
-     * Returns a random [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
-     *
-     * @returns {string} The seed phrase.
-     */
-    static getRandomSeedPhrase(): string;
-    /**
-     * Checks if a seed phrase is valid.
-     *
-     * @param {string} seedPhrase - The seed phrase.
-     * @returns {boolean} True if the seed phrase is valid.
-     */
-    static isValidSeedPhrase(seedPhrase: string): boolean;
-    /**
      * Creates a new wallet manager for the ton blockchain.
      *
      * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
@@ -20,11 +7,21 @@ export default class WalletManagerTon {
      */
     constructor(seed: string | Uint8Array, config?: TonWalletConfig);
     /**
-    * The seed phrase of the wallet.
-    *
-    * @type {Uint8Array}
-    */
-    get seed(): Uint8Array;
+     * The wallet TON configuration.
+     *
+     * @protected
+     * @type {TonWalletConfig}
+     */
+    protected _config: TonWalletConfig;
+    /**
+     * A map between derivation paths and wallet accounts. It contains all the wallet accounts that have been accessed through the {@link getAccount} and {@link getAccountByPath} methods.
+     *
+     * @protected
+     * @type {{ [path: string]: WalletAccountTon }}
+     */
+    protected _accounts: {
+        [path: string]: WalletAccountTon;
+    };
     /**
      * Returns the wallet account at a specific index (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
      *
@@ -48,17 +45,11 @@ export default class WalletManagerTon {
     /**
      * Returns the current fee rates.
      *
-     * @returns {Promise<{ normal: number, fast: number }>} The fee rates (in nanotons).
+     * @returns {Promise<FeeRates>} The fee rates (in nanotons).
      */
-    getFeeRates(): Promise<{
-        normal: number;
-        fast: number;
-    }>;
-    /**
-     * Disposes all the wallet accounts, erasing their private keys from the memory.
-     */
+    getFeeRates(): Promise<FeeRates>;
     dispose(): void;
-    #private;
 }
+export type FeeRates = import("@wdk/wallet").FeeRates;
 export type TonWalletConfig = import("./wallet-account-ton.js").TonWalletConfig;
 import WalletAccountTon from './wallet-account-ton.js';

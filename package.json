@@ -10,6 +10,7 @@
     "lint:fix": "standard --fix"
   },
   "dependencies": {
+    "@wdk/wallet": "https://github.com/tetherto/wdk-wallet#develop",
     "@ton/crypto": "3.3.0",
     "@ton/ton": "15.2.1",
     "bip39": "3.1.0",
