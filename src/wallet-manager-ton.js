@@ -15,18 +15,16 @@
 
 import * as bip39 from 'bip39'
 
-import { TonApiClient } from '@ton-api/client'
-
 import WalletAccountTon from './wallet-account-ton.js'
 
 /** @typedef {import('./wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
+
+const TON_API_URL = 'https://tonapi.io/v2'
 
 export default class WalletManagerTon {
   #seed
   #config
   #accounts
-
-  #tonApi
 
   /**
    * Creates a new wallet manager for the ton blockchain.
@@ -48,25 +46,6 @@ export default class WalletManagerTon {
     this.#config = config
 
     this.#accounts = { }
-
-    const { tonApiUrl, tonApiSecretKey } = config
-
-    if (tonApiUrl) {
-      if (typeof tonApiUrl === 'string') {
-        if (!tonApiSecretKey) {
-          throw new Error('You must also provide a valid secret key to connect the wallet to the ton api.')
-        }
-
-        this.#tonApi = new TonApiClient({
-          baseUrl: tonApiUrl,
-          apiKey: tonApiSecretKey
-        })
-      }
-
-      if (tonApiUrl instanceof TonApiClient) {
-        this.#tonApi = tonApiUrl
-      }
-    }
   }
 
   /**
@@ -112,7 +91,7 @@ export default class WalletManagerTon {
 
   /**
    * Returns the wallet account at a specific BIP-44 derivation path.
-   * 
+   *
    * @example
    * // Returns the account with derivation path m/44'/607'/0'/0/1
    * const account = await wallet.getAccountByPath("0'/0/1");
@@ -137,17 +116,15 @@ export default class WalletManagerTon {
   async getFeeRates () {
     /* eslint-disable camelcase */
 
-    if (!this.#tonApi) {
-      throw new Error('The wallet must be connected to the ton api to fetch fee rates.')
-    }
+    const response = await fetch(`${TON_API_URL}/blockchain/config/raw`)
 
-    const { config: { config_param21 } } = await this.#tonApi.blockchain.getRawBlockchainConfig()
-    const gasPriceBasechainRaw = config_param21.gas_limits_prices.gas_flat_pfx.other.gas_prices_ext.gas_price
-    const gasPriceBasechain = Math.round(gasPriceBasechainRaw / 65536)
+    const { config: { config_param21 } } = await response.json()
+    const gasPrice = config_param21.gas_limits_prices.gas_flat_pfx.other.gas_prices_ext.gas_price
+    const feeRate = Math.round(gasPrice / 65_536)
 
     return {
-      normal: gasPriceBasechain,
-      fast: gasPriceBasechain
+      normal: feeRate,
+      fast: feeRate
     }
   }
 

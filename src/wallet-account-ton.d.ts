@@ -50,14 +50,14 @@ export default class WalletAccountTon {
      * @param {TonTransaction} tx - The transaction to quote.
      * @returns {Promise<number>} - The transaction's fee (in nanotons).
      */
-    quoteTransaction({ to, value, bounceable }: TonTransaction): Promise<number>;
+    quoteTransaction(tx: TonTransaction): Promise<number>;
     /**
      * Sends a transaction with arbitrary data.
      *
      * @param {TonTransaction} tx - The transaction to send.
      * @returns {Promise<string>} The transaction's hash.
      */
-    sendTransaction({ to, value, bounceable }: TonTransaction): Promise<string>;
+    sendTransaction(tx: TonTransaction): Promise<string>;
     /**
      * Returns the account's native token balance.
      *
@@ -78,7 +78,6 @@ export default class WalletAccountTon {
     #private;
 }
 export type TonClient = import('@ton/ton').TonClient;
-export type TonApiClient = import('@ton-api/client').TonApiClient;
 export type KeyPair = {
     /**
      * - The public key.
@@ -112,12 +111,4 @@ export type TonWalletConfig = {
      * - The api-key to use to authenticate on the ton center api.
      */
     tonCenterSecretKey?: string;
-    /**
-     * - The url of the ton api, or a instance of the {@link TonApiClient} class.
-     */
-    tonApiUrl?: string | TonApiClient;
-    /**
-     * - The api-key to use to authenticate on the ton api.
-     */
-    tonApiSecretKey?: string;
 };
