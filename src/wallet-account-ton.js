@@ -273,18 +273,20 @@ export default class WalletAccountTon {
   }
 
   async #getJettonWalletAddress (tokenAddress) {
-    const address = Address.parse(tokenAddress);
+    tokenAddress = Address.parse(tokenAddress)
+
+    const address = Address.parse(this.#address)
 
     const args = [{
       type: 'slice',
-      cell: beginCell().storeAddress(Address.parse(this.#address)).endCell()
-    }];
+      cell: beginCell().storeAddress(address).endCell()
+    }]
 
-    const { stack } = await this.#tonClient.callGetMethod(address, 'get_wallet_address', args);
+    const { stack } = await this.#tonClient.callGetMethod(tokenAddress, 'get_wallet_address', args)
 
-    const jettonWalletAddress = stack.readAddress();
+    const jettonWalletAddress = stack.readAddress()
 
-    return jettonWalletAddress;
+    return jettonWalletAddress
   }
 
   #getHash (message) {

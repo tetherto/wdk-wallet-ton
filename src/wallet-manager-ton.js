@@ -91,7 +91,7 @@ export default class WalletManagerTon {
 
   /**
    * Returns the wallet account at a specific BIP-44 derivation path.
-   * 
+   *
    * @example
    * // Returns the account with derivation path m/44'/607'/0'/0/1
    * const account = await wallet.getAccountByPath("0'/0/1");
