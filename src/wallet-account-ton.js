@@ -25,8 +25,8 @@ import { sodium_memzero } from 'sodium-universal'
 
 import * as bip39 from 'bip39'
 
-/** @typedef {import('@ton/ton').TonClient} TonClient */
-/** @typedef {import('@ton/ton').OpenedContract} OpenedContract */
+/** @typedef {import('@ton/ton').Contract} Contract */
+
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
 
 /** @typedef {import('@wdk/wallet').IWalletAccount} IWalletAccount */
@@ -122,7 +122,7 @@ export default class WalletAccountTon {
        * The contract.
        *
        * @protected
-       * @type {OpenedContract | undefined}
+       * @type {Contract | undefined}
        */
       this._contract = this._tonClient.open(this._wallet)
     }
@@ -348,7 +348,7 @@ export default class WalletAccountTon {
    * Returns the hash of a message.
    *
    * @protected
-   * @param {MessageRelaxed} - The message.
+   * @param {MessageRelaxed} message - The message.
    * @returns {string} The hash.
    */
   _getHash (message) {

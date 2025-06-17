@@ -22,15 +22,8 @@ import WalletAccountTon from './wallet-account-ton.js'
 /** @typedef {import('./wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
 
 const TON_API_URL = 'https://tonapi.io/v2'
-export default class WalletManagerTon extends AbstractWalletManager {
-  /**
-   * The wallet configuration.
-   *
-   * @name _config
-   * @protected
-   * @type {TonWalletConfig}
-   */
 
+export default class WalletManagerTon extends AbstractWalletManager {
   /**
    * Creates a new wallet manager for the ton blockchain.
    *

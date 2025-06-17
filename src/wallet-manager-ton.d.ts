@@ -7,13 +7,6 @@ export default class WalletManagerTon {
      */
     constructor(seed: string | Uint8Array, config?: TonWalletConfig);
     /**
-     * The wallet TON configuration.
-     *
-     * @protected
-     * @type {TonWalletConfig}
-     */
-    protected _config: TonWalletConfig;
-    /**
      * A map between derivation paths and wallet accounts. It contains all the wallet accounts that have been accessed through the {@link getAccount} and {@link getAccountByPath} methods.
      *
      * @protected
@@ -48,6 +41,9 @@ export default class WalletManagerTon {
      * @returns {Promise<FeeRates>} The fee rates (in nanotons).
      */
     getFeeRates(): Promise<FeeRates>;
+    /**
+     * Disposes all the wallet accounts, erasing their private keys from the memory.
+     */
     dispose(): void;
 }
 export type FeeRates = import("@wdk/wallet").FeeRates;

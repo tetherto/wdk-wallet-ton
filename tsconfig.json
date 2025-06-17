@@ -12,11 +12,6 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "noResolve": true,
-    "skipLibCheck": true,
-    "typeRoots": [
-      "./node_modules/@types",
-      "./node_modules/@ton",
-      "./node_modules/@wdk"
-    ]
+    "skipLibCheck": true
   }
 }
