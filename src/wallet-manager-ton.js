@@ -14,6 +14,7 @@
 'use strict'
 
 import AbstractWalletManager from '@wdk/wallet'
+
 import WalletAccountTon from './wallet-account-ton.js'
 
 /** @typedef {import('@wdk/wallet').FeeRates} FeeRates */
@@ -21,8 +22,15 @@ import WalletAccountTon from './wallet-account-ton.js'
 /** @typedef {import('./wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
 
 const TON_API_URL = 'https://tonapi.io/v2'
-
 export default class WalletManagerTon extends AbstractWalletManager {
+  /**
+   * The wallet configuration.
+   *
+   * @name _config
+   * @protected
+   * @type {TonWalletConfig}
+   */
+
   /**
    * Creates a new wallet manager for the ton blockchain.
    *
@@ -31,13 +39,6 @@ export default class WalletManagerTon extends AbstractWalletManager {
    */
   constructor (seed, config = {}) {
     super(seed, config)
-    /**
-     * The wallet TON configuration.
-     *
-     * @protected
-     * @type {TonWalletConfig}
-     */
-    this._config = config
 
     /**
      * A map between derivation paths and wallet accounts. It contains all the wallet accounts that have been accessed through the {@link getAccount} and {@link getAccountByPath} methods.
@@ -100,6 +101,9 @@ export default class WalletManagerTon extends AbstractWalletManager {
     }
   }
 
+  /**
+   * Disposes all the wallet accounts, erasing their private keys from the memory.
+   */
   dispose () {
     for (const account of Object.values(this._accounts)) {
       account.dispose()

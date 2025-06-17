@@ -14,7 +14,8 @@
 'use strict'
 
 import { sign, signVerify } from '@ton/crypto'
-import { Address, beginCell, fromNano, toNano, internal, SendMode, TonClient, WalletContractV5R1 } from '@ton/ton'
+
+import { Address, beginCell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
 
 import nacl from 'tweetnacl'
 import HDKey from 'micro-key-producer/slip10.js'
@@ -24,38 +25,38 @@ import { sodium_memzero } from 'sodium-universal'
 
 import * as bip39 from 'bip39'
 
+/** @typedef {import('@ton/ton').TonClient} TonClient */
+/** @typedef {import('@ton/ton').OpenedContract} OpenedContract */
+/** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
+
 /** @typedef {import('@wdk/wallet').IWalletAccount} IWalletAccount */
 
 /** @typedef {import('@wdk/wallet').KeyPair} KeyPair */
-
-/** @typedef {import('@wdk/wallet').Transaction} Transaction */
-
 /** @typedef {import('@wdk/wallet').TransactionResult} TransactionResult */
-
 /** @typedef {import('@wdk/wallet').TransferOptions} TransferOptions */
-
 /** @typedef {import('@wdk/wallet').TransferResult} TransferResult */
-
-/** @typedef {import('@ton/ton').TonClient} TonClient */
-
-/** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
 
 /**
  * @typedef {Object} TonTransaction
- * @extends Transaction
  * @property {string} to - The transaction's recipient.
  * @property {number} value - The amount of tons to send to the recipient (in nanotons).
  * @property {boolean} [bounceable] - If set, overrides the bounceability of the transaction.
  */
 
 /**
- * @typedef {Object} TonWalletConfig
- * @property {string | TonClient} [tonCenterUrl] - The url of the ton center api, or a instance of the {@link TonClient} class.
- * @property {string} [tonCenterSecretKey] - The api-key to use to authenticate on the ton center api.
+ * @typedef {Object} TonClientConfig
+ * @property {string} url - The url of the ton center api.
+ * @property {string} secretKey - The api-key to use to authenticate on the ton center api.
  */
 
-const DUMMY_MESSAGE_VALUE = toNano(0.05)
+/**
+ * @typedef {Object} TonWalletConfig
+ * @property {TonClientConfig | TonClient} [tonClient] - The ton client configuration, or an instance of the {@link TonClient} class.
+ */
+
 const BIP_44_TON_DERIVATION_PATH_PREFIX = "m/44'/607'"
+
+const DUMMY_MESSAGE_VALUE = toNano(0.05)
 
 function derivePath (seed, path) {
   const hdKey = HDKey.fromMasterSeed(seed)
@@ -68,20 +69,13 @@ function derivePath (seed, path) {
 /** @implements {IWalletAccount} */
 export default class WalletAccountTon {
   /**
+   * Creates a new ton wallet account.
+   * 
    * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
    * @param {string} path - The BIP-44 derivation path (e.g. "0'/0/0").
    * @param {TonWalletConfig} [config] - The configuration object.
    */
-
   constructor (seed, path, config = {}) {
-    /**
-     * The TON wallet account configuration.
-     *
-     * @protected
-     * @type {TonWalletConfig}
-     */
-    this._config = config
-
     if (typeof seed === 'string') {
       if (!bip39.validateMnemonic(seed)) {
         throw new Error('The seed phrase is invalid.')
@@ -95,44 +89,42 @@ export default class WalletAccountTon {
     const keyPair = derivePath(seed, path)
 
     /**
-     * The V5R1 wallet contract TON.
+     * The wallet.
      *
-     * @type {WalletContractV5R1}
      * @protected
+     * @type {WalletContractV5R1}
      */
     this._wallet = WalletContractV5R1.create({ workchain: 0, publicKey: keyPair.publicKey })
+
     /** @private */
     this._address = this._wallet.address.toString({ urlSafe: true, bounceable: false, testOnly: false })
+
     /** @private */
     this._path = path
+
     /** @private */
     this._keyPair = keyPair
 
-    /**
-     * The ton center client.
-     *
-     * @type {TonClient}
-     * @protected
-     */
-    this._tonClient = undefined
+    if (config.tonClient) {
+      const { tonClient } = config
 
-    const { tonCenterUrl, tonCenterSecretKey } = config
+      /**
+       * The ton client.
+       *
+       * @protected
+       * @type {TonClient | undefined}
+       */
+      this._tonClient = tonClient instanceof TonClient
+        ? tonClient
+        : new TonClient({ endpoint: tonClient.url, apiKey: tonClient.secretKey })
 
-    if (tonCenterUrl) {
-      if (typeof tonCenterUrl === 'string') {
-        if (!tonCenterSecretKey) {
-          throw new Error('You must also provide a valid secret key to connect the wallet to the ton center api.')
-        }
-
-        this._tonClient = new TonClient({
-          endpoint: tonCenterUrl,
-          apiKey: tonCenterSecretKey
-        })
-      }
-
-      if (tonCenterUrl instanceof TonClient) {
-        this._tonClient = tonCenterUrl
-      }
+      /**
+       * The contract.
+       *
+       * @protected
+       * @type {OpenedContract | undefined}
+       */
+      this._contract = this._tonClient.open(this._wallet)
     }
   }
 
@@ -198,96 +190,20 @@ export default class WalletAccountTon {
   async verify (message, signature) {
     const _message = Buffer.from(message)
     const _signature = Buffer.from(signature, 'hex')
-
     return signVerify(_message, _signature, this._keyPair.publicKey)
   }
 
   /**
-   * Quotes the costs of a send transaction operation.
+   * Returns the account's ton balance.
    *
-   * @param {TonTransaction} tx - The transaction.
-   * @returns {Promise<Omit<TransactionResult, 'hash'>>} The send transaction’s quotes.
-   */
-  async quoteSendTransaction ({ to, value, bounceable }) {
-    const { transfer } = await this._buildTransaction({ to, value, bounceable })
-
-    const fee = await this._getFeeForTransfer(transfer)
-
-    return { fee }
-  }
-
-  /**
-   * Sends a transaction.
-   *
-   * @param {TonTransaction} tx - The transaction.
-   * @returns {Promise<TransactionResult>} The send transaction’s result.
-   */
-  async sendTransaction ({ to, value, bounceable }) {
-    const { contract, transfer, message } = await this._buildTransaction({ to, value, bounceable })
-    const fee = await this._getFeeForTransfer(transfer)
-
-    if (this._config.transferMaxFee && fee >= this._config.transferMaxFee) {
-      throw new Error('Exceeded maximum fee cost for transaction.')
-    }
-
-    await contract.send(transfer)
-
-    const hash = this._getHash(message).toString('hex')
-
-    return { hash, fee }
-  }
-
-  /**
-   * Quotes the costs of a transfer operation.
-   *
-   * @param {TransferOptions} options - The transfer's options.
-   * @returns {Promise<Omit<TransferResult, 'hash'>>} The transfer's quotes.
-   */
-
-  async quoteTransfer ({ recipient, amount, token }) {
-    const { transfer } = await this._buildTransfer({ recipient, amount, token })
-
-    const fee = await this._getFeeForTransfer(transfer)
-
-    return { fee }
-  }
-
-  /**
-   * Transfers a token to another address.
-   *
-   * @param {TransferOptions} options - The transfer's options.
-   * @returns {Promise<TransferResult>} The transfer's result.
-   */
-
-  async transfer ({ recipient, amount, token }) {
-    const { transfer, contract, message } = await this._buildTransfer({ recipient, amount, token })
-
-    const fee = await this._getFeeForTransfer(transfer)
-
-    if (this._config.transferMaxFee && fee >= this._config.transferMaxFee) {
-      throw new Error('Exceeded maximum fee cost for transfer.')
-    }
-
-    await contract.send(transfer)
-
-    const hash = this._getHash(message).toString('hex')
-
-    return { hash, fee }
-  }
-
-  /**
-   * Returns the account's native token balance.
-   *
-   * @returns {Promise<number>} The native token balance.
+   * @returns {Promise<number>} The ton balance (in nanotons).
    */
   async getBalance () {
     if (!this._tonClient) {
       throw new Error('The wallet must be connected to ton center to get balances.')
     }
 
-    const contract = this._tonClient.open(this._wallet)
-
-    const balance = await contract.getBalance()
+    const balance = await this._contract.getBalance()
 
     return Number(balance)
   }
@@ -296,7 +212,7 @@ export default class WalletAccountTon {
    * Returns the balance of the account for a specific token.
    *
    * @param {string} tokenAddress - The smart contract address of the token.
-   * @returns {Promise<number>} The token balance.
+   * @returns {Promise<number>} The token balance (in base unit).
    */
   async getTokenBalance (tokenAddress) {
     if (!this._tonClient) {
@@ -312,102 +228,116 @@ export default class WalletAccountTon {
     return balance
   }
 
-  /** @private */
-  async _getFeeForTransfer (transfer) {
-    /* eslint-disable camelcase */
-
+  /**
+   * Sends a transaction.
+   *
+   * @param {TonTransaction} tx - The transaction.
+   * @returns {Promise<TransactionResult>} The transaction's result.
+   */
+  async sendTransaction (tx) {
     if (!this._tonClient) {
-      throw new Error('The wallet must be connected to the ton center api to quote transactions.')
+      throw new Error('The wallet must be connected to ton center to send transactions.')
     }
 
-    const { source_fees: { in_fwd_fee, storage_fee, gas_fee, fwd_fee } } = await this._tonClient.estimateExternalMessageFee(this._wallet.address, { body: transfer })
+    const { transfer, hash } = await this._getTransfer(tx)
 
-    return in_fwd_fee + storage_fee + gas_fee + fwd_fee
-  }
+    const fee = await this._getTransferFee(transfer)
 
-  /** @private */
-  async _buildTransfer ({ recipient, amount, token }) {
-    if (!this._tonClient) {
-      throw new Error('The wallet must be connected to the ton center api to quote transactions.')
-    }
+    await this._contract.send(transfer)
 
-    const contract = this._tonClient.open(this._wallet)
-    const jettonWalletAddress = await this._getJettonWalletAddress(token)
-    const jettonTransferBody = beginCell()
-      .storeUint(0x0f8a7ea5, 32)
-      .storeUint(0, 64)
-      .storeCoins(amount)
-      .storeAddress(Address.parse(recipient))
-      .storeAddress(this._wallet.address)
-      .storeBit(false)
-      .storeCoins(1n)
-      .storeMaybeRef(undefined)
-      .endCell()
-
-    const message = internal({
-      to: jettonWalletAddress,
-      value: DUMMY_MESSAGE_VALUE,
-      body: jettonTransferBody,
-      bounce: true
-    })
-
-    const seqno = await contract.getSeqno()
-
-    const transfer = await contract.createTransfer({
-      secretKey: this._keyPair.secretKey,
-      seqno,
-      sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
-      messages: [message]
-    })
-
-    return { transfer, contract, message }
-  }
-
-  /** @private */
-  async _buildTransaction ({ to, value, bounceable }) {
-    if (!this._tonClient) {
-      throw new Error('The wallet must be connected to the ton center api to perform this operation.')
-    }
-
-    to = Address.parseFriendly(to)
-
-    const contract = this._tonClient.open(this._wallet)
-
-    const message = internal({
-      to: to.address,
-      value: fromNano(value).toString(),
-      body: 'Transfer',
-      bounce: bounceable ?? to.isBounceable
-    })
-
-    const transfer = contract.createTransfer({
-      secretKey: this._keyPair.secretKey,
-      seqno: await contract.getSeqno(),
-      sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
-      messages: [message]
-    })
-
-    return { contract, transfer, message }
+    return { hash, fee }
   }
 
   /**
-   * Returns the Jetton wallet address for a given Jetton token address using its owner address.
+   * Quotes the costs of a send transaction operation.
    *
-   * @param {string} - The jetton token address
-   * @returns {Address} The Jetton wallet address.
+   * @see {sendTransaction}
+   * @param {TonTransaction} tx - The transaction.
+   * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
+   */
+  async quoteSendTransaction (tx) {
+    if (!this._tonClient) {
+      throw new Error('The wallet must be connected to ton center to quote send transaction operations.')
+    }
+
+    const { transfer } = await this._getTransfer(tx)
+
+    const fee = await this._getTransferFee(transfer)
+
+    return { fee }
+  }
+
+  /**
+   * Transfers a token to another address.
+   *
+   * @param {TransferOptions} options - The transfer's options.
+   * @returns {Promise<TransferResult>} The transfer's result.
+   */
+
+  async transfer (options) {
+    if (!this._tonClient) {
+      throw new Error('The wallet must be connected to ton center to transfer tokens.')
+    }
+
+    const { transfer, hash } = await this._getTokenTransfer(options)
+
+    const fee = await this._getTransferFee(transfer)
+
+    // eslint-disable-next-line eqeqeq
+    if (this._config.transferMaxFee != undefined && fee >= this._config.transferMaxFee) {
+      throw new Error('Exceeded maximum fee cost for transfer operations.')
+    }
+
+    await this._contract.send(transfer)
+
+    return { hash, fee }
+  }
+
+  /**
+   * Quotes the costs of a transfer operation.
+   *
+   * @see {transfer}
+   * @param {TransferOptions} options - The transfer's options.
+   * @returns {Promise<Omit<TransferResult, 'hash'>>} The transfer's quotes.
+   */
+
+  async quoteTransfer (options) {
+    if (!this._tonClient) {
+      throw new Error('The wallet must be connected to ton center to quote transfer operations.')
+    }
+
+    const { transfer } = await this._getTokenTransfer(options)
+
+    const fee = await this._getTransferFee(transfer)
+
+    return { fee }
+  }
+
+  /**
+   * Disposes the wallet account, erasing the private key from the memory.
+   */
+  dispose () {
+    sodium_memzero(this._keyPair.secretKey)
+
+    this._keyPair.secretKey = undefined
+  }
+  
+  /**
+   * Returns the jetton wallet address of the given jetton.
+   *
    * @protected
+   * @param {string} tokenAddress - The jetton token address.
+   * @returns {Promise<Address>} The jetton wallet address.
    */
   async _getJettonWalletAddress (tokenAddress) {
     tokenAddress = Address.parse(tokenAddress)
 
     const address = Address.parse(this._address)
 
-    const args = [{
+    const { stack } = await this._tonClient.callGetMethod(tokenAddress, 'get_wallet_address', [{
       type: 'slice',
       cell: beginCell().storeAddress(address).endCell()
-    }]
-
-    const { stack } = await this._tonClient.callGetMethod(tokenAddress, 'get_wallet_address', args)
+    }])
 
     const jettonWalletAddress = stack.readAddress()
 
@@ -415,11 +345,11 @@ export default class WalletAccountTon {
   }
 
   /**
-   * Returns the hash for a message.
+   * Returns the hash of a message.
    *
-   * @param {MessageRelaxed} - The message to compute the hash.
-   * @returns {string}
    * @protected
+   * @param {MessageRelaxed} - The message.
+   * @returns {string} The hash.
    */
   _getHash (message) {
     if (message.info.type === 'internal') {
@@ -441,9 +371,76 @@ export default class WalletAccountTon {
     return hash
   }
 
-  dispose () {
-    sodium_memzero(this._keyPair.secretKey)
+  /** @private */
+  async _getTransfer ({ to, value, bounceable }) {
+    to = Address.parseFriendly(to)
 
-    this._keyPair.secretKey = undefined
+    const message = internal({
+      to: to.address,
+      value: fromNano(value).toString(),
+      body: 'Transfer',
+      bounce: bounceable ?? to.isBounceable
+    })
+
+    const seqno = await this._contract.getSeqno()
+
+    const transfer = this._contract.createTransfer({
+      secretKey: this._keyPair.secretKey,
+      sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+      messages: [message],
+      seqno
+    })
+
+    const hash = this._getHash(message).toString('hex')
+
+    return { transfer, hash }
+  }
+
+  /** @private */
+  async _getTokenTransfer ({ token, recipient, amount }) {
+    recipient = Address.parse(recipient)
+
+    const jettonWalletAddress = await this._getJettonWalletAddress(token)
+
+    const body = beginCell()
+      .storeUint(0x0f8a7ea5, 32)
+      .storeUint(0, 64)
+      .storeCoins(amount)
+      .storeAddress(recipient)
+      .storeAddress(this._wallet.address)
+      .storeBit(false)
+      .storeCoins(1n)
+      .storeMaybeRef(undefined)
+      .endCell()
+
+    const message = internal({
+      to: jettonWalletAddress,
+      value: DUMMY_MESSAGE_VALUE,
+      body: body,
+      bounce: true
+    })
+
+    const seqno = await this._contract.getSeqno()
+
+    const transfer = this._contract.createTransfer({
+      secretKey: this._keyPair.secretKey,
+      sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+      messages: [message],
+      seqno
+    })
+
+    const hash = this._getHash(message).toString('hex')
+
+    return { transfer, hash }
+  }
+
+  /** @private */
+  async _getTransferFee (transfer) {
+    /* eslint-disable camelcase */
+
+    const { source_fees: { in_fwd_fee, storage_fee, gas_fee, fwd_fee } } = 
+      await this._tonClient.estimateExternalMessageFee(this._wallet.address, { body: transfer })
+
+    return in_fwd_fee + storage_fee + gas_fee + fwd_fee
   }
 }
