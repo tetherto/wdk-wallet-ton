@@ -144,7 +144,7 @@ export default class WalletAccountTon implements IWalletAccount {
     /** @private */
     private _getTransferFee;
 }
-export type OpenedContract = import("@ton/ton").OpenedContract;
+export type OpenedContract<F> = import("@ton/ton").OpenedContract<F>;
 export type MessageRelaxed = import("@ton/ton").MessageRelaxed;
 export type IWalletAccount = import("@wdk/wallet").IWalletAccount;
 export type KeyPair = import("@wdk/wallet").KeyPair;
