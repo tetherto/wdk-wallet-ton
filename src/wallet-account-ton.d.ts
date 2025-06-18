@@ -9,6 +9,13 @@ export default class WalletAccountTon implements IWalletAccount {
      */
     constructor(seed: string | Uint8Array, path: string, config?: TonWalletConfig);
     /**
+     * The ton wallet configuration.
+     *
+     * @protected
+     * @type {TonWalletConfig}
+     */
+    protected _config: TonWalletConfig;
+    /**
      * The wallet.
      *
      * @protected

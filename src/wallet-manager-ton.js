@@ -35,7 +35,7 @@ export default class WalletManagerTon extends AbstractWalletManager {
 
     /**
      * The ton wallet configuration.
-     * 
+     *
      * @protected
      * @type {TonWalletConfig}
      */

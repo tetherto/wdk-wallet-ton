@@ -70,7 +70,7 @@ function derivePath (seed, path) {
 export default class WalletAccountTon {
   /**
    * Creates a new ton wallet account.
-   * 
+   *
    * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
    * @param {string} path - The BIP-44 derivation path (e.g. "0'/0/0").
    * @param {TonWalletConfig} [config] - The configuration object.
@@ -87,6 +87,14 @@ export default class WalletAccountTon {
     path = BIP_44_TON_DERIVATION_PATH_PREFIX + '/' + path
 
     const keyPair = derivePath(seed, path)
+
+    /**
+     * The ton wallet configuration.
+     *
+     * @protected
+     * @type {TonWalletConfig}
+     */
+    this._config = config
 
     /**
      * The wallet.
@@ -321,7 +329,7 @@ export default class WalletAccountTon {
 
     this._keyPair.secretKey = undefined
   }
-  
+
   /**
    * Returns the jetton wallet address of the given jetton.
    *
@@ -416,7 +424,7 @@ export default class WalletAccountTon {
     const message = internal({
       to: jettonWalletAddress,
       value: DUMMY_MESSAGE_VALUE,
-      body: body,
+      body,
       bounce: true
     })
 
@@ -438,7 +446,7 @@ export default class WalletAccountTon {
   async _getTransferFee (transfer) {
     /* eslint-disable camelcase */
 
-    const { source_fees: { in_fwd_fee, storage_fee, gas_fee, fwd_fee } } = 
+    const { source_fees: { in_fwd_fee, storage_fee, gas_fee, fwd_fee } } =
       await this._tonClient.estimateExternalMessageFee(this._wallet.address, { body: transfer })
 
     return in_fwd_fee + storage_fee + gas_fee + fwd_fee
