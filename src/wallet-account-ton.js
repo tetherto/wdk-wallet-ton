@@ -25,7 +25,7 @@ import { sodium_memzero } from 'sodium-universal'
 
 import * as bip39 from 'bip39'
 
-/** @typedef {import('@ton/ton').Contract} Contract */
+/** @typedef {import('@ton/ton').OpenedContract} OpenedContract */
 
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
 
@@ -122,7 +122,7 @@ export default class WalletAccountTon {
        * The contract.
        *
        * @protected
-       * @type {Contract | undefined}
+       * @type {OpenedContract<WalletContractV5R1> | undefined}
        */
       this._contract = this._tonClient.open(this._wallet)
     }

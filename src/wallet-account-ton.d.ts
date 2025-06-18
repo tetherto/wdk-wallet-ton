@@ -32,9 +32,9 @@ export default class WalletAccountTon implements IWalletAccount {
      * The contract.
      *
      * @protected
-     * @type {Contract | undefined}
+     * @type {OpenedContract<WalletContractV5R1> | undefined}
      */
-    protected _contract: Contract | undefined;
+    protected _contract: OpenedContract<WalletContractV5R1> | undefined;
     /**
      * The derivation path's index of this account.
      *
@@ -144,7 +144,7 @@ export default class WalletAccountTon implements IWalletAccount {
     /** @private */
     private _getTransferFee;
 }
-export type Contract = import("@ton/ton").Contract;
+export type OpenedContract = import("@ton/ton").OpenedContract;
 export type MessageRelaxed = import("@ton/ton").MessageRelaxed;
 export type IWalletAccount = import("@wdk/wallet").IWalletAccount;
 export type KeyPair = import("@wdk/wallet").KeyPair;
@@ -181,6 +181,4 @@ export type TonWalletConfig = {
      */
     tonClient?: TonClientConfig | TonClient;
 };
-import { WalletContractV5R1 } from '@ton/ton';
-import { TonClient } from '@ton/ton';
-import { Address } from '@ton/ton';
+import { Address, TonClient, WalletContractV5R1 } from '@ton/ton';

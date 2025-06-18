@@ -34,6 +34,14 @@ export default class WalletManagerTon extends AbstractWalletManager {
     super(seed, config)
 
     /**
+     * The ton wallet configuration.
+     * 
+     * @protected
+     * @type {TonWalletConfig}
+     */
+    this._config = config
+
+    /**
      * A map between derivation paths and wallet accounts. It contains all the wallet accounts that have been accessed through the {@link getAccount} and {@link getAccountByPath} methods.
      *
      * @protected
