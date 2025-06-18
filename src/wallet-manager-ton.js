@@ -13,19 +13,17 @@
 // limitations under the License.
 'use strict'
 
-import * as bip39 from 'bip39'
+import AbstractWalletManager from '@wdk/wallet'
 
 import WalletAccountTon from './wallet-account-ton.js'
+
+/** @typedef {import('@wdk/wallet').FeeRates} FeeRates */
 
 /** @typedef {import('./wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
 
 const TON_API_URL = 'https://tonapi.io/v2'
 
-export default class WalletManagerTon {
-  #seed
-  #config
-  #accounts
-
+export default class WalletManagerTon extends AbstractWalletManager {
   /**
    * Creates a new wallet manager for the ton blockchain.
    *
@@ -33,47 +31,23 @@ export default class WalletManagerTon {
    * @param {TonWalletConfig} [config] - The configuration object.
    */
   constructor (seed, config = {}) {
-    if (typeof seed === 'string') {
-      if (!WalletManagerTon.isValidSeedPhrase(seed)) {
-        throw new Error('The seed phrase is invalid.')
-      }
+    super(seed, config)
 
-      seed = bip39.mnemonicToSeedSync(seed)
-    }
+    /**
+     * The ton wallet configuration.
+     *
+     * @protected
+     * @type {TonWalletConfig}
+     */
+    this._config = config
 
-    this.#seed = seed
-
-    this.#config = config
-
-    this.#accounts = { }
-  }
-
-  /**
-   * Returns a random [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
-   *
-   * @returns {string} The seed phrase.
-   */
-  static getRandomSeedPhrase () {
-    return bip39.generateMnemonic()
-  }
-
-  /**
-   * Checks if a seed phrase is valid.
-   *
-   * @param {string} seedPhrase - The seed phrase.
-   * @returns {boolean} True if the seed phrase is valid.
-   */
-  static isValidSeedPhrase (seedPhrase) {
-    return bip39.validateMnemonic(seedPhrase)
-  }
-
-  /**
-  * The seed phrase of the wallet.
-  *
-  * @type {Uint8Array}
-  */
-  get seed () {
-    return this.#seed
+    /**
+     * A map between derivation paths and wallet accounts. It contains all the wallet accounts that have been accessed through the {@link getAccount} and {@link getAccountByPath} methods.
+     *
+     * @protected
+     * @type {{ [path: string]: WalletAccountTon }}
+     */
+    this._accounts = {}
   }
 
   /**
@@ -99,19 +73,19 @@ export default class WalletManagerTon {
    * @returns {Promise<WalletAccountTon>} The account.
    */
   async getAccountByPath (path) {
-    if (!this.#accounts[path]) {
-      const account = new WalletAccountTon(this.#seed, path, this.#config)
+    if (!this._accounts[path]) {
+      const account = new WalletAccountTon(this.seed, path, this._config)
 
-      this.#accounts[path] = account
+      this._accounts[path] = account
     }
 
-    return this.#accounts[path]
+    return this._accounts[path]
   }
 
   /**
    * Returns the current fee rates.
    *
-   * @returns {Promise<{ normal: number, fast: number }>} The fee rates (in nanotons).
+   * @returns {Promise<FeeRates>} The fee rates (in nanotons).
    */
   async getFeeRates () {
     /* eslint-disable camelcase */
@@ -132,10 +106,10 @@ export default class WalletManagerTon {
    * Disposes all the wallet accounts, erasing their private keys from the memory.
    */
   dispose () {
-    for (const account of Object.values(this.#accounts)) {
+    for (const account of Object.values(this._accounts)) {
       account.dispose()
     }
 
-    this.#accounts = { }
+    this._accounts = {}
   }
 }

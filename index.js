@@ -13,9 +13,14 @@
 // limitations under the License.
 'use strict'
 
-/** @typedef {import('./src/wallet-manager-ton.js').TonWalletConfig} TonWalletConfig */
+/** @typedef {import('@wdk/wallet').FeeRates} FeeRates */
+/** @typedef {import('@wdk/wallet').KeyPair} KeyPair */
+/** @typedef {import('@wdk/wallet').TransactionResult} TransactionResult */
+/** @typedef {import('@wdk/wallet').TransferOptions} TransferOptions */
+/** @typedef {import('@wdk/wallet').TransferResult} TransferResult */
 
-/** @typedef {import('./src/wallet-account-ton.js').KeyPair} KeyPair */
+/** @typedef {import('./src/wallet-account-ton.js').TonClientConfig} TonClientConfig */
+/** @typedef {import('./src/wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
 /** @typedef {import('./src/wallet-account-ton.js').TonTransaction} TonTransaction */
 
 export { default } from './src/wallet-manager-ton.js'

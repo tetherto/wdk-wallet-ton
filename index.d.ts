@@ -1,5 +1,10 @@
 export { default } from "./src/wallet-manager-ton.js";
 export { default as WalletAccountTon } from "./src/wallet-account-ton.js";
-export type TonWalletConfig = import("./src/wallet-manager-ton.js").TonWalletConfig;
-export type KeyPair = import("./src/wallet-account-ton.js").KeyPair;
+export type FeeRates = import("@wdk/wallet").FeeRates;
+export type KeyPair = import("@wdk/wallet").KeyPair;
+export type TransactionResult = import("@wdk/wallet").TransactionResult;
+export type TransferOptions = import("@wdk/wallet").TransferOptions;
+export type TransferResult = import("@wdk/wallet").TransferResult;
+export type TonClientConfig = import("./src/wallet-account-ton.js").TonClientConfig;
+export type TonWalletConfig = import("./src/wallet-account-ton.js").TonWalletConfig;
 export type TonTransaction = import("./src/wallet-account-ton.js").TonTransaction;
