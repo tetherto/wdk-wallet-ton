@@ -63,6 +63,8 @@ function derivePath (seed, path) {
   const { privateKey } = hdKey.derive(path, true)
   const keyPair = nacl.sign.keyPair.fromSeed(privateKey)
 
+  sodium_memzero(privateKey)
+
   return keyPair
 }
 
