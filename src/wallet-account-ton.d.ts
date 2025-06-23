@@ -178,9 +178,9 @@ export type TonClientConfig = {
      */
     url: string;
     /**
-     * - The api-key to use to authenticate on the ton center api.
+     * - If set, uses an api-key to authenticate on the ton center api.
      */
-    secretKey: string;
+    secretKey?: string;
 };
 export type TonWalletConfig = {
     /**

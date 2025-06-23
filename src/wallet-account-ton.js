@@ -46,7 +46,7 @@ import * as bip39 from 'bip39'
 /**
  * @typedef {Object} TonClientConfig
  * @property {string} url - The url of the ton center api.
- * @property {string} secretKey - The api-key to use to authenticate on the ton center api.
+ * @property {string} [secretKey] - If set, uses an api-key to authenticate on the ton center api.
  */
 
 /**
