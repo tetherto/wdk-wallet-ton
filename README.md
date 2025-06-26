@@ -492,7 +492,7 @@ This package works with the TON blockchain (The Open Network), including:
 ### Complete Wallet Setup
 
 ```javascript
-import WalletManagerEvm from '@wdk/wallet-evm'
+import WalletManagerTon from '@wdk/wallet-ton'
 
 async function setupWallet() {
   // Use a BIP-39 seed phrase (replace with your own secure phrase)
