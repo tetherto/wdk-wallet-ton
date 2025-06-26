@@ -1,7 +1,5 @@
 # @wdk/wallet-ton
 
-A simple and secure package to manage BIP-32 wallets for TON blockchain. This package provides a clean API for creating, managing, and interacting with Ethereum-compatible wallets using BIP-39 seed phrases and BIP-44 derivation paths.
-
 A simple and secure package to manage BIP-32 wallets for the TON blockchain. This package provides a clean API for creating, managing, and interacting with TON wallets using BIP-39 seed phrases and TON-specific derivation paths.
 
 ## About WDK
@@ -36,9 +34,6 @@ npm install @wdk/wallet-ton
 ```javascript
 import WalletManagerTon from '@wdk/wallet-ton'
 
-import WalletAccountTon from '@wdk/wallet-ton'
-
-
 // Use a BIP-39 seed phrase (replace with your own secure phrase)
 const seedPhrase = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
 
@@ -70,7 +65,7 @@ console.log('Custom account address:', customAddress)
 ### Checking Balances
 
 ```javascript
-// Get native token balance (ETH, MATIC, BNB, etc.)
+// Get native TON balance
 const balance = await account.getBalance()
 console.log('Native TON balance:', balance, 'nanotons')
 
