@@ -470,8 +470,8 @@ console.log('Private key length:', privateKey.length)
 
 This package works with the TON blockchain (The Open Network), including:
 
-- TON Mainnet
-- TON Testnet
+- **TON Mainnet**
+- **TON Testnet**
 
 ## Security Considerations
 
