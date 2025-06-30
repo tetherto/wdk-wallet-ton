@@ -25,6 +25,8 @@ import { sodium_memzero } from 'sodium-universal'
 
 import * as bip39 from 'bip39'
 
+/** @typedef {import('@ton/ton').Transaction} Transaction */
+
 /** @typedef {import('@ton/ton').OpenedContract} OpenedContract */
 
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
@@ -57,6 +59,8 @@ import * as bip39 from 'bip39'
 const BIP_44_TON_DERIVATION_PATH_PREFIX = "m/44'/607'"
 
 const DUMMY_MESSAGE_VALUE = toNano(0.05)
+
+const TON_CENTER_V3_URL = 'https://toncenter.com/api/v3'
 
 function derivePath (seed, path) {
   const hdKey = HDKey.fromMasterSeed(seed)
@@ -321,6 +325,41 @@ export default class WalletAccountTon {
     const fee = await this._getTransferFee(transfer)
 
     return { fee }
+  }
+
+  /**
+   * Returns a transaction’s receipt.
+   *
+   * @param {string} hash - The transaction’s body hash.
+   * @returns {Promise<Transaction | null>} - The receipt, or null if the transaction has not been included in a block yet.
+   */
+  async getTransactionReceipt (hash) {
+    const url = new URL(`${TON_CENTER_V3_URL}/transactionsByMessage`)
+
+    url.searchParams.set('body_hash', hash)
+    url.searchParams.set('direction', 'out')
+    url.searchParams.set('limit', 1)
+
+    const response = await fetch(url.toString())
+    const { transactions } = await response.json()
+
+    if (transactions && transactions.length === 0) {
+      return null
+    }
+
+    const receipt = transactions[0]
+
+    const [transaction] = await this._tonClient.getTransactions(Address.parse(this._address), {
+      lt: receipt.lt,
+      hash: receipt.hash,
+      limit: 1
+    })
+
+    if (!transaction) {
+      return null
+    }
+
+    return transaction
   }
 
   /**
