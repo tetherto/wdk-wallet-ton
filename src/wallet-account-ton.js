@@ -25,8 +25,6 @@ import { sodium_memzero } from 'sodium-universal'
 
 import * as bip39 from 'bip39'
 
-/** @typedef {import('@ton/ton').TupleReader} TupleReader */
-
 /** @typedef {import('@ton/ton').OpenedContract} OpenedContract */
 
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
@@ -59,22 +57,6 @@ import * as bip39 from 'bip39'
 const BIP_44_TON_DERIVATION_PATH_PREFIX = "m/44'/607'"
 
 const DUMMY_MESSAGE_VALUE = toNano(0.05)
-
-class JettonNotInitializedError extends Error {
-  constructor (jettonAddress) {
-    super(`Jetton not initialized: ${jettonAddress}`)
-    this.name = 'JettonNotInitializedError'
-    this.exitCode = -13
-  }
-}
-
-class JettonWalletNotInitializedError extends Error {
-  constructor (jettonWalletAddress) {
-    super(`Jetton wallet address not initialized: ${jettonWalletAddress}`)
-    this.name = 'JettonWalletNotInitializedError'
-    this.exitCode = -13
-  }
-}
 
 function derivePath (seed, path) {
   const hdKey = HDKey.fromMasterSeed(seed)
@@ -250,13 +232,13 @@ export default class WalletAccountTon {
     try {
       const jettonWalletAddress = await this._getJettonWalletAddress(tokenAddress)
 
-      const stack = await this._getJettonWalletData(jettonWalletAddress)
+      const { stack } = await this._tonClient.callGetMethod(jettonWalletAddress, 'get_wallet_data', [])
 
       const balance = stack.readNumber()
 
       return balance
     } catch (error) {
-      if (error instanceof JettonNotInitializedError || error instanceof JettonWalletNotInitializedError) {
+      if (error.message.includes('exit_code: -13')) {
         return 0
       }
 
@@ -370,43 +352,14 @@ export default class WalletAccountTon {
 
     const address = Address.parse(this._address)
 
-    try {
-      const { stack } = await this._tonClient.callGetMethod(tokenAddress, 'get_wallet_address', [{
-        type: 'slice',
-        cell: beginCell().storeAddress(address).endCell()
-      }])
+    const { stack } = await this._tonClient.callGetMethod(tokenAddress, 'get_wallet_address', [{
+      type: 'slice',
+      cell: beginCell().storeAddress(address).endCell()
+    }])
 
-      const jettonWalletAddress = stack.readAddress()
+    const jettonWalletAddress = stack.readAddress()
 
-      return jettonWalletAddress
-    } catch (error) {
-      if (error.message.includes('exit_code: -13')) {
-        throw new JettonNotInitializedError(tokenAddress)
-      }
-
-      throw error
-    }
-  }
-
-  /**
-   * Returns the jetton wallet data.
-   *
-   * @protected
-   * @param {string} jettonWalletAddress - The jetton wallet address.
-   * @returns {Promise<TupleReader>} The jetton wallet data.
-   */
-  async _getJettonWalletData (jettonWalletAddress) {
-    try {
-      const { stack } = await this._tonClient.callGetMethod(jettonWalletAddress, 'get_wallet_data', [])
-
-      return stack
-    } catch (error) {
-      if (error.message.includes('exit_code: -13')) {
-        throw new JettonWalletNotInitializedError(jettonWalletAddress)
-      }
-
-      throw error
-    }
+    return jettonWalletAddress
   }
 
   /**
