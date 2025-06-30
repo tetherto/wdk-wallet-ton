@@ -229,13 +229,21 @@ export default class WalletAccountTon {
       throw new Error('The wallet must be connected to ton center to get token balances.')
     }
 
-    const jettonWalletAddress = await this._getJettonWalletAddress(tokenAddress)
+    try {
+      const jettonWalletAddress = await this._getJettonWalletAddress(tokenAddress)
 
-    const { stack } = await this._tonClient.callGetMethod(jettonWalletAddress, 'get_wallet_data', [])
+      const { stack } = await this._tonClient.callGetMethod(jettonWalletAddress, 'get_wallet_data', [])
 
-    const balance = stack.readNumber()
+      const balance = stack.readNumber()
 
-    return balance
+      return balance
+    } catch (error) {
+      if (error.message.includes('exit_code: -13')) {
+        return 0
+      }
+
+      throw error
+    }
   }
 
   /**
