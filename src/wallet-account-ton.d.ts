@@ -137,6 +137,14 @@ export default class WalletAccountTon implements IWalletAccount {
      */
     protected _getJettonWalletAddress(tokenAddress: string): Promise<Address>;
     /**
+     * Returns the jetton wallet data.
+     *
+     * @protected
+     * @param {string} jettonWalletAddress - The jetton wallet address.
+     * @returns {Promise<TupleReader>} The jetton wallet data.
+     */
+    protected _getJettonWalletData(jettonWalletAddress: string): Promise<TupleReader>;
+    /**
      * Returns the hash of a message.
      *
      * @protected
@@ -151,6 +159,7 @@ export default class WalletAccountTon implements IWalletAccount {
     /** @private */
     private _getTransferFee;
 }
+export type TupleReader = import("@ton/ton").TupleReader
 export type OpenedContract<F> = import("@ton/ton").OpenedContract<F>;
 export type MessageRelaxed = import("@ton/ton").MessageRelaxed;
 export type IWalletAccount = import("@wdk/wallet").IWalletAccount;
