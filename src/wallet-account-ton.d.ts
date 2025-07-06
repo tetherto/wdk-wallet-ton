@@ -128,9 +128,9 @@ export default class WalletAccountTon implements IWalletAccount {
      * Returns a transaction’s receipt.
      *
      * @param {string} hash - The transaction’s body hash.
-     * @returns {Promise<Transaction | null>} - The receipt, or null if the transaction has not been included in a block yet.
+     * @returns {Promise<TonTransactionReceipt | null>} - The receipt, or null if the transaction has not been included in a block yet.
      */
-    getTransactionReceipt(hash: string): Promise<Transaction | null>;
+    getTransactionReceipt(hash: string): Promise<TonTransactionReceipt | null>;
     /**
      * Disposes the wallet account, erasing the private key from the memory.
      */
@@ -158,7 +158,7 @@ export default class WalletAccountTon implements IWalletAccount {
     /** @private */
     private _getTransferFee;
 }
-export type Transaction = import("@ton/ton").Transaction;
+export type TonTransactionReceipt = import("@ton/ton").Transaction;
 export type OpenedContract<F> = import("@ton/ton").OpenedContract<F>;
 export type MessageRelaxed = import("@ton/ton").MessageRelaxed;
 export type IWalletAccount = import("@wdk/wallet").IWalletAccount;

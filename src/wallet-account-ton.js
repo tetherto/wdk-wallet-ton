@@ -25,7 +25,7 @@ import { sodium_memzero } from 'sodium-universal'
 
 import * as bip39 from 'bip39'
 
-/** @typedef {import('@ton/ton').Transaction} Transaction */
+/** @typedef {import('@ton/ton').Transaction} TonTransactionReceipt */
 
 /** @typedef {import('@ton/ton').OpenedContract} OpenedContract */
 
@@ -331,33 +331,27 @@ export default class WalletAccountTon {
    * Returns a transaction’s receipt.
    *
    * @param {string} hash - The transaction’s body hash.
-   * @returns {Promise<Transaction | null>} - The receipt, or null if the transaction has not been included in a block yet.
+   * @returns {Promise<TonTransactionReceipt | null>} - The receipt, or null if the transaction has not been included in a block yet.
    */
   async getTransactionReceipt (hash) {
-    const url = new URL(`${TON_CENTER_V3_URL}/transactionsByMessage`)
+    const query = new URLSearchParams({
+      body_hash: hash,
+      direction: 'out',
+      limit: 1
+    })
 
-    url.searchParams.set('body_hash', hash)
-    url.searchParams.set('direction', 'out')
-    url.searchParams.set('limit', 1)
-
-    const response = await fetch(url.toString())
+    const response = await fetch(`${TON_CENTER_V3_URL}/transactionsByMessage?${query.toString()}`)
     const { transactions } = await response.json()
 
-    if (transactions && transactions.length === 0) {
+    if (!transactions || transactions.length === 0) {
       return null
     }
 
     const receipt = transactions[0]
 
     const [transaction] = await this._tonClient.getTransactions(Address.parse(this._address), {
-      lt: receipt.lt,
-      hash: receipt.hash,
-      limit: 1
+      hash: receipt.hash
     })
-
-    if (!transaction) {
-      return null
-    }
 
     return transaction
   }
@@ -394,12 +388,12 @@ export default class WalletAccountTon {
   }
 
   /**
-   * Returns the hash of a message.
-   *
-   * @protected
-   * @param {MessageRelaxed} message - The message.
-   * @returns {string} The hash.
-   */
+     * Returns the hash of a message.
+     *
+     * @protected
+     * @param {MessageRelaxed} message - The message.
+     * @returns {string} The hash.
+     */
   _getHash (message) {
     if (message.info.type === 'internal') {
       return message.body.hash()
