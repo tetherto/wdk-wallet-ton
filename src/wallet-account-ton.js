@@ -358,9 +358,9 @@ export default class WalletAccountTon {
 
     const address = Address.parse(this._address)
 
-    const { hash } = transactions[0]
+    const receipt = transactions[0]
 
-    const [ transaction ] = await this._tonClient.getTransactions(address, { hash })
+    const [ transaction ] = await this._tonClient.getTransactions(address, { hash: receipt.hash })
 
     return transaction
   }
