@@ -25,11 +25,11 @@ import { sodium_memzero } from 'sodium-universal'
 
 import * as bip39 from 'bip39'
 
-/** @typedef {import('@ton/ton').Transaction} TonTransactionReceipt */
-
 /** @typedef {import('@ton/ton').OpenedContract} OpenedContract */
 
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
+
+/** @typedef {import('@ton/ton').Transaction} TonTransactionReceipt */
 
 /** @typedef {import('@wdk/wallet').IWalletAccount} IWalletAccount */
 
@@ -328,9 +328,9 @@ export default class WalletAccountTon {
   }
 
   /**
-   * Returns a transaction’s receipt.
+   * Returns a transaction's receipt.
    *
-   * @param {string} hash - The transaction’s body hash.
+   * @param {string} hash - The transaction's hash.
    * @returns {Promise<TonTransactionReceipt | null>} - The receipt, or null if the transaction has not been included in a block yet.
    */
   async getTransactionReceipt (hash) {
@@ -341,17 +341,18 @@ export default class WalletAccountTon {
     })
 
     const response = await fetch(`${TON_CENTER_V3_URL}/transactionsByMessage?${query.toString()}`)
+
     const { transactions } = await response.json()
 
     if (!transactions || transactions.length === 0) {
       return null
     }
 
-    const receipt = transactions[0]
+    const address = Address.parse(this._address)
 
-    const [transaction] = await this._tonClient.getTransactions(Address.parse(this._address), {
-      hash: receipt.hash
-    })
+    const { hash } = transactions[0]
+
+    const [ transaction ] = await this._tonClient.getTransactions(address, { hash })
 
     return transaction
   }
@@ -388,12 +389,12 @@ export default class WalletAccountTon {
   }
 
   /**
-     * Returns the hash of a message.
-     *
-     * @protected
-     * @param {MessageRelaxed} message - The message.
-     * @returns {string} The hash.
-     */
+   * Returns the hash of a message.
+   *
+   * @protected
+   * @param {MessageRelaxed} message - The message.
+   * @returns {string} The hash.
+   */
   _getHash (message) {
     if (message.info.type === 'internal') {
       return message.body.hash()

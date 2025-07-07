@@ -19,10 +19,10 @@
 /** @typedef {import('@wdk/wallet').TransferOptions} TransferOptions */
 /** @typedef {import('@wdk/wallet').TransferResult} TransferResult */
 
-/** @typedef {import('./src/wallet-account-ton.js').TonTransactionReceipt} TonTransactionReceipt */
 /** @typedef {import('./src/wallet-account-ton.js').TonClientConfig} TonClientConfig */
 /** @typedef {import('./src/wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
 /** @typedef {import('./src/wallet-account-ton.js').TonTransaction} TonTransaction */
+/** @typedef {import('./src/wallet-account-ton.js').TonTransactionReceipt} TonTransactionReceipt */
 
 export { default } from './src/wallet-manager-ton.js'
 
