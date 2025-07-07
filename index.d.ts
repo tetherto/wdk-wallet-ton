@@ -8,3 +8,4 @@ export type TransferResult = import("@wdk/wallet").TransferResult;
 export type TonClientConfig = import("./src/wallet-account-ton.js").TonClientConfig;
 export type TonWalletConfig = import("./src/wallet-account-ton.js").TonWalletConfig;
 export type TonTransaction = import("./src/wallet-account-ton.js").TonTransaction;
+export type TonTransactionReceipt = import("./src/wallet-account-ton.js").TonTransactionReceipt;
