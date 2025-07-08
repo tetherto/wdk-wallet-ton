@@ -24,6 +24,9 @@
 /** @typedef {import('./src/wallet-account-ton.js').TonTransaction} TonTransaction */
 /** @typedef {import('./src/wallet-account-ton.js').TonTransactionReceipt} TonTransactionReceipt */
 
+// bare support - noop a non bare env - adds the peer deps the wallet deps use
+import 'bare-wdk-runtime'
+
 export { default } from './src/wallet-manager-ton.js'
 
 export { default as WalletAccountTon } from './src/wallet-account-ton.js'
