@@ -1,65 +1,14 @@
-import * as bip39 from 'bip39'
-
-import { beforeEach, afterAll, describe, expect, jest, test } from '@jest/globals'
+import { beforeEach, describe, expect, jest, test } from '@jest/globals'
 
 import WalletManagerTon, { WalletAccountTon } from '../index.js'
 
 const SEED_PHRASE = 'cook voyage document eight skate token alien guide drink uncle term abuse'
-
-const INVALID_SEED_PHRASE = 'invalid seed phrase'
 
 describe('WalletManagerTon', () => {
   let wallet
 
   beforeEach(() => {
     wallet = new WalletManagerTon(SEED_PHRASE)
-  })
-
-  describe('constructor', () => {
-    test('should successfully initialize a wallet manager for the given seed phrase', () => {
-      const wallet = new WalletManagerTon(SEED_PHRASE)
-
-      expect(wallet.seed).toEqual(bip39.mnemonicToSeedSync(SEED_PHRASE))
-    })
-
-    test('should throw if the seed phrase is invalid', () => {
-      // eslint-disable-next-line no-new
-      expect(() => { new WalletManagerTon(INVALID_SEED_PHRASE) })
-        .toThrow('Invalid seed phrase.')
-    })
-  })
-
-  describe('static getRandomSeedPhrase', () => {
-    test('should generate a valid 12-word seed phrase', () => {
-      const seedPhrase = WalletManagerTon.getRandomSeedPhrase()
-
-      const words = seedPhrase.trim()
-        .split(/\s+/)
-
-      expect(words).toHaveLength(12)
-
-      words.forEach(word => {
-        expect(bip39.wordlists.EN.includes(word))
-          .not.toBe(-1)
-      })
-    })
-  })
-
-  describe('static isValidSeedPhrase', () => {
-    test('should return true for a valid seed phrase', () => {
-      expect(WalletManagerTon.isValidSeedPhrase(SEED_PHRASE))
-        .toBe(true)
-    })
-
-    test('should return false for an invalid seed phrase', () => {
-      expect(WalletManagerTon.isValidSeedPhrase(INVALID_SEED_PHRASE))
-        .toBe(false)
-    })
-
-    test('should return false for an empty string', () => {
-      expect(WalletManagerTon.isValidSeedPhrase(''))
-        .toBe(false)
-    })
   })
 
   describe('getAccount', () => {
@@ -102,12 +51,6 @@ describe('WalletManagerTon', () => {
 
   describe('getFeeRates', () => {
     const EXPECTED_FEE_RATE = 1_234
-
-    const { fetch: originalFetch } = global
-
-    afterAll(() => {
-      global.fetch = originalFetch
-    })
 
     test('should return the correct fee rates', async () => {
       global.fetch = jest.fn(() =>

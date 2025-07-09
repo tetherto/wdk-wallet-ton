@@ -189,7 +189,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
 
     // eslint-disable-next-line eqeqeq
     if (this._config.transferMaxFee != undefined && fee >= this._config.transferMaxFee) {
-      throw new Error('Exceeded maximum fee cost for transfer operations.')
+      throw new Error('Exceeded maximum fee cost for transfer operation.')
     }
 
     await this._contract.send(transfer)

@@ -1,4 +1,5 @@
 import { TonClient } from '@ton/ton'
+
 export default class TonClientStub extends TonClient {
   constructor (blockchain) {
     super({ endpoint: '/' })

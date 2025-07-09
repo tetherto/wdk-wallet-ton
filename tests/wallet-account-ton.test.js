@@ -1,73 +1,62 @@
-import '@ton/test-utils'
-import { Blockchain } from '@ton/sandbox'
+import { randomAddress } from '@ton/test-utils'
+import * as bip39 from 'bip39'
+import BlockchainWithLogs from './blockchain-with-logs.js'
 import { JettonMinter, JettonWallet } from '@ton-community/assets-sdk'
-import { beginCell, toNano } from '@ton/core'
+import { beginCell, toNano, Address, Cell } from '@ton/ton'
 import TonClientStub from './ton-client-stub.js'
 
-import { beforeEach, describe, expect, test } from '@jest/globals'
+import { beforeEach, describe, expect, test, jest } from '@jest/globals'
 
 import { WalletAccountTon } from '../index.js'
 
 const SEED_PHRASE = 'cook voyage document eight skate token alien guide drink uncle term abuse'
+const SEED = bip39.mnemonicToSeedSync(SEED_PHRASE)
 const INVALID_SEED_PHRASE = 'invalid seed phrase'
 
-const TRANSACTION = {
-  to: 'UQCfu7DHKCYwqiohPFVQxjp45DDW3-tWSo-eIigNoZBaqOfQ',
-  value: 100,
-  bounceable: false
-}
-
+const ACCOUNT_PRIVATE_KEY = '904a9fec5f3e5bea8f1b4c5180828843e6acd58c198967fd56b4159b44b5a68ef2ade24192b5a0fba669da730d105088a3a848519f43b27f24bdd8395eb26b8f'
+const ACCOUNT_PUBLIC_KEY = 'f2ade24192b5a0fba669da730d105088a3a848519f43b27f24bdd8395eb26b8f'
 const ACCOUNT = {
   index: 0,
   path: "m/44'/607'/0'/0/0",
   address: 'UQAvTZZjLwb1qnnuP1szbILyQyZT2zpSRX_Bw-fh4O9QojNi',
   keyPair: {
-    privateKey: new Uint8Array(Buffer.from('904a9fec5f3e5bea8f1b4c5180828843e6acd58c198967fd56b4159b44b5a68ef2ade24192b5a0fba669da730d105088a3a848519f43b27f24bdd8395eb26b8f', 'hex')),
-    publicKey: new Uint8Array(Buffer.from('f2ade24192b5a0fba669da730d105088a3a848519f43b27f24bdd8395eb26b8f', 'hex'))
+    privateKey: new Uint8Array(Buffer.from(ACCOUNT_PRIVATE_KEY, 'hex')),
+    publicKey: new Uint8Array(Buffer.from(ACCOUNT_PUBLIC_KEY, 'hex'))
   }
 }
 
 describe('WalletAccountTon', () => {
-  let tonClient, account, blockchain, deployer, jettonMinter, treasury, recipient
+  let tonClient, account, blockchain, jettonMinter, treasury, deployer, recipient
 
   beforeEach(async () => {
-    blockchain = await Blockchain.create()
+    blockchain = await BlockchainWithLogs.create()
     treasury = await blockchain.treasury('treasury')
-    recipient = await blockchain.treasury('recipient')
     tonClient = new TonClientStub(blockchain)
     deployer = await blockchain.treasury('deployer')
     jettonMinter = blockchain.openContract(JettonMinter.createFromConfig({
       admin: deployer.address,
-      content: beginCell().storeStringTail('USDT').endCell()
+      content: beginCell().storeStringTail('TestToken').endCell()
     }))
 
-    const deployResult = await jettonMinter.sendDeploy(deployer.getSender(), toNano(0.05))
-
-    expect(deployResult.transactions).toHaveTransaction({
-      from: deployer.address,
-      on: jettonMinter.address,
-      deploy: true,
-      success: true
-    })
+    await jettonMinter.sendDeploy(deployer.getSender(), toNano(0.05))
 
     account = new WalletAccountTon(SEED_PHRASE, "0'/0/0", {
       tonClient
     })
-
-    const walletContract = account._wallet
-
-    const fundResult = await treasury.send({
-      to: walletContract.address,
-      value: toNano('0.5'),
-      init: walletContract.init
+    recipient = new WalletAccountTon(SEED_PHRASE, "0'/0/666", {
+      tonClient
     })
 
-    expect(fundResult.transactions).toHaveTransaction({
-      from: treasury.address,
-      to: walletContract.address,
-      deploy: true,
-      success: true,
-      endStatus: 'active'
+    await treasury.send({
+      to: account._wallet.address,
+      value: toNano('100'),
+      init: account._wallet.init
+    })
+
+    await treasury.send({
+      to: recipient._wallet.address,
+      value: toNano('5'),
+      init: recipient._wallet.init
     })
 
     const mintAmount = toNano('1000')
@@ -78,6 +67,10 @@ describe('WalletAccountTon', () => {
       toNano('0.05'),
       toNano('0.1')
     )
+  })
+
+  afterEach(() => {
+    account.dispose()
   })
 
   describe('constructor', () => {
@@ -91,6 +84,19 @@ describe('WalletAccountTon', () => {
       expect(account.keyPair).toEqual({
         privateKey: ACCOUNT.keyPair.privateKey,
         publicKey: ACCOUNT.keyPair.publicKey
+      })
+    })
+
+    test('should successfully initialize an account for the given seed and path', async () => {
+      const account = new WalletAccountTon(SEED, "0'/0/0")
+
+      expect(account.index).toBe(ACCOUNT.index)
+
+      expect(account.path).toBe(ACCOUNT.path)
+
+      expect(account.keyPair).toEqual({
+        privateKey: new Uint8Array(Buffer.from(ACCOUNT.keyPair.privateKey, 'hex')),
+        publicKey: new Uint8Array(Buffer.from(ACCOUNT.keyPair.publicKey, 'hex'))
       })
     })
 
@@ -150,17 +156,65 @@ describe('WalletAccountTon', () => {
     })
   })
 
-  describe('sendTransaction method', () => {
+  describe('sendTransaction', () => {
     test('should successfully send a transaction', async () => {
-      const result = await account.sendTransaction({ to: recipient.address.toString(), value: 10_000 })
+      const value = 11111111
+      const result = await account.sendTransaction({ to: await recipient.getAddress(), value, bounceable: false })
+
+      expect(blockchain.transactions).toHaveTransaction({
+        from: account._wallet.address,
+        to: recipient._wallet.address,
+        value: BigInt(value),
+        success: true
+      })
 
       expect(result).toEqual({ hash: 'e3dafa8c96cee59affae9a9ce1c1ac0661ba2b041bee6b46fd188f61ee70582a', fee: 4 })
+    })
+
+    test('should successfully send a transaction with a bounceable address', async () => {
+      const value = 11111111
+      const result = await account.sendTransaction({ to: recipient._wallet.address.toString(), value, bounceable: true })
+
+      expect(blockchain.transactions).toHaveTransaction({
+        from: account._wallet.address,
+        to: recipient._wallet.address,
+        value: BigInt(value),
+        success: true
+      })
+
+      expect(result).toEqual({ hash: 'e3dafa8c96cee59affae9a9ce1c1ac0661ba2b041bee6b46fd188f61ee70582a', fee: 4 })
+    })
+
+    test('should bounce the transaction when sent to a non-existent address', async () => {
+      const value = 11111111
+      const nonExistentAddress = randomAddress()
+
+      await account.sendTransaction({
+        to: nonExistentAddress.toString(),
+        value,
+        bounceable: true
+      })
+
+      expect(blockchain.transactions).toHaveTransaction({
+        from: nonExistentAddress,
+        to: account._wallet.address,
+        inMessageBounced: true,
+        success: true
+      })
+
+      expect(blockchain.transactions).toHaveTransaction({
+        from: account._wallet.address,
+        to: nonExistentAddress,
+        value: BigInt(value),
+        success: false,
+        inMessageBounced: false
+      })
     })
 
     test('should throw if the account is not connected to the ton center', async () => {
       const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0")
 
-      await expect(account.sendTransaction({ to: recipient.address.toString(), value: 10_000 }))
+      await expect(account.sendTransaction({ to: recipient._wallet.address, value: 10_000 }))
         .rejects.toThrow('The wallet must be connected to ton center to send transactions.')
     })
   })
@@ -185,27 +239,59 @@ describe('WalletAccountTon', () => {
     })
   })
 
-  describe('transfer method', () => {
-    test('transfer', async () => {
-      const transferAmount = toNano('100')
+  describe('transfer', () => {
+    test('should successfully transfer tokens', async () => {
+      const transferAmount = 22_222
+      const senderJettonWalletAddress = await jettonMinter.getWalletAddress(account._wallet.address)
+      const recipientJettonWalletAddress = await jettonMinter.getWalletAddress(recipient._wallet.address)
 
       const result = await account.transfer({
         token: jettonMinter.address.toString(),
-        recipient: recipient.address.toString(),
+        recipient: await recipient.getAddress(),
         amount: transferAmount
       })
 
-      expect(result).toEqual({ hash: '7ffc3a0c11076e2bcefb7bed34f40e5de7ed858fa509b7eb22bc527eb63b7a97', fee: 4 })
+      const internalTransferBody = beginCell()
+        .storeUint(0x0f8a7ea5, 32)
+        .storeUint(0, 64)
+        .storeCoins(transferAmount)
+        .storeAddress(recipient._wallet.address)
+        .storeAddress(account._wallet.address)
+        .storeBit(false)
+        .storeCoins(1n)
+        .storeMaybeRef(undefined)
+        .endCell()
 
-      const recipientJettonWalletAddress = await jettonMinter.getWalletAddress(recipient.address)
-      const recipientJettonWallet = blockchain.openContract(
-        JettonWallet.createFromAddress(recipientJettonWalletAddress)
-      )
+      expect(blockchain.transactions).toHaveTransaction({
+        from: account._wallet.address,
+        to: senderJettonWalletAddress,
+        body: internalTransferBody,
+        success: true
+      })
 
-      const recipientJettonWalletData = await recipientJettonWallet.getData()
-      const recipientBalance = recipientJettonWalletData.balance
+      expect(blockchain.transactions).toHaveTransaction({
+        from: senderJettonWalletAddress,
+        to: recipientJettonWalletAddress,
+        success: true
+      })
 
-      expect(recipientBalance).toEqual(transferAmount)
+      expect(result).toEqual({ hash: '8f170dca659c6ff27347c3e39d9580df59c5954b91837544a78f2f41ce3d5bc0', fee: 4 })
+    })
+
+    test('should throw if transfer fee exceeds the transfer max fee configuration', async () => {
+      const TRANSFER = {
+        token: jettonMinter.address.toString(),
+        recipient: await recipient.getAddress(),
+        amount: 100_000
+      }
+
+      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0", {
+        tonClient,
+        transferMaxFee: 0
+      })
+
+      await expect(account.transfer(TRANSFER))
+        .rejects.toThrow('Exceeded maximum fee cost for transfer operation.')
     })
 
     test('should throw if the account is not connected to ton center', async () => {
@@ -213,10 +299,33 @@ describe('WalletAccountTon', () => {
 
       await expect(account.transfer({
         token: 'EQA3Ce7HlnCZNBYLzJoD7FO-NvNLbOArDEimVY1oNw_eAPeX',
-        recipient: recipient.address.toString(),
+        recipient: await recipient.getAddress(),
         amount: 1_000
       }))
         .rejects.toThrow('The wallet must be connected to ton center to transfer tokens.')
+    })
+  })
+
+  describe('quoteTransfer', () => {
+    test('should successfully quote a transaction', async () => {
+      const result = await account.quoteTransfer({
+        token: jettonMinter.address.toString(),
+        recipient: await recipient.getAddress(),
+        amount: 1_000
+      })
+
+      expect(result).toEqual({ fee: 4 })
+    })
+
+    test('should throw if the account is not connected to ton center', async () => {
+      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0")
+
+      await expect(account.quoteTransfer({
+        token: jettonMinter.address.toString(),
+        recipient: await recipient.getAddress(),
+        amount: 1_000
+      }))
+        .rejects.toThrow('The wallet must be connected to ton center to quote transfer operations.')
     })
   })
 
@@ -237,23 +346,104 @@ describe('WalletAccountTon', () => {
     test('should throw if the account is not connected to the ton center', async () => {
       const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0")
 
-      await expect(account.getBalance(TRANSACTION))
+      await expect(account.getBalance({
+        to: 'UQCfu7DHKCYwqiohPFVQxjp45DDW3-tWSo-eIigNoZBaqOfQ',
+        value: 100,
+        bounceable: false
+      }))
         .rejects.toThrow('The wallet must be connected to ton center to get balances.')
     })
   })
 
   describe('getTokenBalance', () => {
     test('should return the correct token balance of the account', async () => {
+      const mintAmount = toNano('100')
+      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/2", {
+        tonClient
+      })
+
+      await jettonMinter.sendMint(
+        deployer.getSender(),
+        account._wallet.address,
+        mintAmount,
+        toNano('0.05'),
+        toNano('0.1')
+      )
+
       const balance = await account.getTokenBalance(jettonMinter.address.toString())
 
-      expect(balance)
+      expect(balance).toEqual(Number(mintAmount))
     })
 
     test('should throw if the account is not connected to the ton center', async () => {
       const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0")
 
-      await expect(account.getTokenBalance(recipient.address.toString()))
+      await expect(account.getTokenBalance(await recipient.getAddress()))
         .rejects.toThrow('The wallet must be connected to ton center to get token balances.')
+    })
+  })
+
+  describe('getTransactionReceipt', () => {
+    test('should return the correct transaction receipt for the given hash', async () => {
+      const mockBodyHash = 'mock_in_msg_body_hash_1234567890abcdef'
+      const mockTransactionHash = 'mock_transaction_hash_fedcba0987654321'
+      const mockTonTransaction = {
+        hash: () => Buffer.from(mockTransactionHash, 'hex')
+      }
+
+      const getTransactionsSpy = jest.spyOn(tonClient, 'getTransactions').mockImplementation((address, options) => {
+        expect(address.toString()).toBe(Address.parse(account._address).toString())
+        expect(options).toEqual({ hash: mockTransactionHash })
+        return Promise.resolve([mockTonTransaction])
+      })
+
+      const mockTonCenterResponse = {
+        transactions: [
+          {
+            hash: mockTransactionHash
+          }
+        ]
+      }
+
+      const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation((url) => {
+        const urlObj = new URL(url)
+        expect(urlObj.searchParams.get('body_hash')).toBe(mockBodyHash)
+        expect(urlObj.searchParams.get('direction')).toBe('out')
+        expect(urlObj.searchParams.get('limit')).toBe('1')
+
+        return Promise.resolve({
+          json: () => Promise.resolve(mockTonCenterResponse)
+        })
+      })
+
+      const receivedReceipt = await account.getTransactionReceipt(mockBodyHash)
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+      expect(getTransactionsSpy).toHaveBeenCalledTimes(1)
+      expect(receivedReceipt.hash().toString('hex')).toBe(mockTonTransaction.hash().toString('hex'))
+
+      fetchSpy.mockRestore()
+      getTransactionsSpy.mockRestore()
+    })
+
+    test('should return null if no transaction is found by body hash from TonCenter', async () => {
+      const mockTonCenterResponse = {
+        transactions: []
+      }
+
+      const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation(() =>
+        Promise.resolve({
+          json: () => Promise.resolve(mockTonCenterResponse)
+        })
+      )
+
+      const dummyBodyHash = 'some_non_existent_hash_123'
+      const receipt = await account.getTransactionReceipt(dummyBodyHash)
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+      expect(receipt).toBeNull()
+
+      fetchSpy.mockRestore()
     })
   })
 })
