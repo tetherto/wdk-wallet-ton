@@ -13,6 +13,7 @@
     "emitDeclarationOnly": true,
     "noResolve": true,
     "skipLibCheck": true,
+    "outDir": "./types",
     "typeRoots": [
       "./node_modules/@types",
       "./node_modules/@ton",
