@@ -112,9 +112,9 @@ export default class WalletAccountReadOnlyTon extends AbstractWalletAccountReadO
 export type OpenedContract<F> = import("@ton/ton").OpenedContract<F>;
 export type MessageRelaxed = import("@ton/ton").MessageRelaxed;
 export type TonTransactionReceipt = import("@ton/ton").Transaction;
-export type TransactionResult = any;
-export type TransferOptions = any;
-export type TransferResult = any;
+export type TransactionResult = import("@wdk/wallet").TransactionResult;
+export type TransferOptions = import("@wdk/wallet").TransferOptions;
+export type TransferResult = import("@wdk/wallet").TransferResult;
 export type TonTransaction = {
     /**
      * - The transaction's recipient.
