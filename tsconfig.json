@@ -2,7 +2,8 @@
   "include": [
     "index.js",
     "src/wallet-manager-ton.js",
-    "src/wallet-account-ton.js"
+    "src/wallet-account-ton.js",
+    "src/wallet-account-read-only-ton.js"
   ],
   "compilerOptions": {
     "target": "ES2015",
@@ -13,11 +14,6 @@
     "emitDeclarationOnly": true,
     "noResolve": true,
     "skipLibCheck": true,
-    "outDir": "./types",
-    "typeRoots": [
-      "./node_modules/@types",
-      "./node_modules/@ton",
-      "./node_modules/@wdk"
-    ]
+    "outDir": "./types"
   }
 }
