@@ -165,7 +165,6 @@ export default class WalletAccountReadOnlyTon extends AbstractWalletAccountReadO
   /**
    * Quotes the costs of a send transaction operation.
    *
-   * @see {sendTransaction}
    * @param {TonTransaction} tx - The transaction.
    * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
    */
@@ -184,7 +183,6 @@ export default class WalletAccountReadOnlyTon extends AbstractWalletAccountReadO
   /**
    * Quotes the costs of a transfer operation.
    *
-   * @see {transfer}
    * @param {TransferOptions} options - The transfer's options.
    * @returns {Promise<Omit<TransferResult, 'hash'>>} The transfer's quotes.
    */
