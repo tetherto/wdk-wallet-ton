@@ -50,18 +50,6 @@ const TON_CENTER_V3_URL = 'https://toncenter.com/api/v3'
 
 const SECRET_KEY_NULL = Buffer.alloc(64)
 
-const WALLET_CONTRACT_V5R1_INIT_CODE = Buffer.from('b5ee9c7241021401000281000114ff00f4a413f4bcf2c80b01020120020d020148030402dcd020d749c\
-120915b8f6320d70b1f2082106578746ebd21821073696e74bdb0925f03e082106578746eba8eb48020d72101d074d721fa4030fa44f828fa443058bd915be0ed44d0\
-810141d721f4058307f40e6fa1319130e18040d721707fdb3ce03120d749810280b99130e070e2100f020120050c020120060902016e07080019adce76a2684020eb9\
-0eb85ffc00019af1df6a2684010eb90eb858fc00201480a0b0017b325fb51341c75c875c2c7e00011b262fb513435c280200019be5f0f6a2684080a0eb90fa02c0102\
-f20e011e20d70b1f82107369676ebaf2e08a7f0f01e68ef0eda2edfb218308d722028308d723208020d721d31fd31fd31fed44d0d200d31f20d31fd3ffd70a000af90\
-140ccf9109a28945f0adb31e1f2c087df02b35007b0f2d0845125baf2e0855036baf2e086f823bbf2d0882292f800de01a47fc8ca00cb1f01cf16c9ed542092f80fde\
-70db3cd81003f6eda2edfb02f404216e926c218e4c0221d73930709421c700b38e2d01d72820761e436c20d749c008f2e09320d74ac002f2e09320d71d06c712c2005\
-230b0f2d089d74cd7393001a4e86c128407bbf2e093d74ac000f2e093ed55e2d20001c000915be0ebd72c08142091709601d72c081c12e25210b1e30f20d74a111213\
-009601fa4001fa44f828fa443058baf2e091ed44d0810141d718f405049d7fc8ca0040048307f453f2e08b8e14038307f45bf2e08c22d70a00216e01b3b0f2d090e2c\
-85003cf1612f400c9ed54007230d72c08248e2d21f2e092d200ed44d0d2005113baf2d08f54503091319c01810140d721d70a00f2e08ee2c8ca0058cf16c9ed5493f2\
-c08de20010935bdb31e1d74cd0b4d6c35e', 'hex')
-
 export default class WalletAccountReadOnlyTon extends AbstractWalletAccountReadOnly {
   /**
    * Creates a new ton read-only wallet account.
@@ -344,8 +332,8 @@ export default class WalletAccountReadOnlyTon extends AbstractWalletAccountReadO
 
     const { source_fees } = await this._tonClient.estimateExternalMessageFee(address, {
       body: transfer,
-      initCode: !code ? Cell.fromBoc(WALLET_CONTRACT_V5R1_INIT_CODE)[0] : null,
-      initData: !data ? Cell.EMPTY : null
+      initCode: !code ? this._wallet.init.code : null,
+      initData: !data ? this._wallet.init.data : null
     })
 
     const { in_fwd_fee, storage_fee, gas_fee, fwd_fee } = source_fees
