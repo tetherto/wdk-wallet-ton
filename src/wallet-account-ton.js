@@ -15,7 +15,7 @@
 
 import { sign, signVerify } from '@ton/crypto'
 
-import { Address, beginCell, Cell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
+import { beginCell, SendMode } from '@ton/ton'
 
 import nacl from 'tweetnacl'
 import HDKey from 'micro-key-producer/slip10.js'
@@ -165,9 +165,9 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
 
     await this._contract.send(transfer)
 
-    return { 
-      hash: this._getMessageHash(message), 
-      fee 
+    return {
+      hash: this._getMessageHash(message),
+      fee
     }
   }
 
@@ -194,9 +194,9 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
 
     await this._contract.send(transfer)
 
-    return { 
-      hash: this._getMessageHash(message), 
-      fee 
+    return {
+      hash: this._getMessageHash(message),
+      fee
     }
   }
 

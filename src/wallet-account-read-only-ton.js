@@ -77,8 +77,8 @@ export default class WalletAccountReadOnlyTon extends AbstractWalletAccountReadO
     this._config = config
 
     /**
-     * The v5r1 wallet. 
-     * 
+     * The v5r1 wallet.
+     *
      * @protected
      * @type {WalletContractV5R1}
      */
@@ -212,8 +212,8 @@ export default class WalletAccountReadOnlyTon extends AbstractWalletAccountReadO
 
     const receipt = transactions[0]
 
-    const [ transaction ] = await this._tonClient.getTransactions(address, { 
-      hash: receipt.hash 
+    const [transaction] = await this._tonClient.getTransactions(address, {
+      hash: receipt.hash
     })
 
     return transaction
@@ -241,9 +241,9 @@ export default class WalletAccountReadOnlyTon extends AbstractWalletAccountReadO
     return jettonWalletAddress
   }
 
-  /** 
+  /**
    * Creates and returns an internal message to execute the given transaction.
-   * 
+   *
    * @protected
    * @param {TonTransaction} tx - The transaction.
    * @returns {Promise<MessageRelaxed>} The internal message.
@@ -261,9 +261,9 @@ export default class WalletAccountReadOnlyTon extends AbstractWalletAccountReadO
     return message
   }
 
-  /** 
-   * Creates and returns an internal message to execute the given token transfer. 
-   * 
+  /**
+   * Creates and returns an internal message to execute the given token transfer.
+   *
    * @protected
    * @param {TransferOptions} options - The transfer's options.
    * @returns {Promise<MessageRelaxed>} The internal message.
@@ -296,9 +296,9 @@ export default class WalletAccountReadOnlyTon extends AbstractWalletAccountReadO
     return message
   }
 
-  /** 
-   * Creates and returns a v5r1 transfer to execute the given message. 
-   * 
+  /**
+   * Creates and returns a v5r1 transfer to execute the given message.
+   *
    * @protected
    * @param {MessageRelaxed} message - The message.
    * @returns {Promise<Cell>} The v5r1 transfer.
@@ -318,7 +318,7 @@ export default class WalletAccountReadOnlyTon extends AbstractWalletAccountReadO
 
   /**
    * Returns the fee of a transfer.
-   * 
+   *
    * @protected
    * @param {Cell} transfer - The transfer.
    * @returns {Promise<number>} The transfer's fee.
