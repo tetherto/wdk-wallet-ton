@@ -201,6 +201,17 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
   }
 
   /**
+   * Returns a read-only copy of the account.
+   *
+   * @returns {Promise<WalletAccountReadOnlyTon>} The read-only account.
+   */
+  async toReadOnlyAccount () {
+    const readOnlyAccount = new WalletAccountReadOnlyTon(this._keyPair.publicKey, this._config)
+
+    return readOnlyAccount
+  }
+
+  /**
    * Disposes the wallet account, erasing the private key from the memory.
    */
   dispose () {

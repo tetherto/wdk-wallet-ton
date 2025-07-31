@@ -67,6 +67,12 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon implement
      */
     transfer(options: TransferOptions): Promise<TransferResult>;
     /**
+     * Returns a read-only copy of the account.
+     *
+     * @returns {Promise<WalletAccountReadOnlyTon>} The read-only account.
+     */
+    toReadOnlyAccount(): Promise<WalletAccountReadOnlyTon>;
+    /**
      * Disposes the wallet account, erasing the private key from the memory.
      */
     dispose(): void;
