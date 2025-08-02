@@ -1,4 +1,4 @@
-export default class WalletAccountReadOnlyTon extends AbstractWalletAccountReadOnly {
+export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
     /**
      * Creates a new ton read-only wallet account.
      *
@@ -149,5 +149,5 @@ export type TonWalletConfig = {
      */
     transferMaxFee?: number;
 };
-import { AbstractWalletAccountReadOnly } from '@wdk/wallet';
+import { WalletAccountReadOnly } from '@wdk/wallet';
 import { Address, Cell, TonClient, WalletContractV5R1 } from '@ton/ton';

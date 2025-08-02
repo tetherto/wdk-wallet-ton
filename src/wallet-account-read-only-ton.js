@@ -13,7 +13,7 @@
 // limitations under the License.
 'use strict'
 
-import { AbstractWalletAccountReadOnly } from '@wdk/wallet'
+import { WalletAccountReadOnly } from '@wdk/wallet'
 
 import { Address, beginCell, Cell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
 
@@ -50,7 +50,7 @@ const TON_CENTER_V3_URL = 'https://toncenter.com/api/v3'
 
 const SECRET_KEY_NULL = Buffer.alloc(64)
 
-export default class WalletAccountReadOnlyTon extends AbstractWalletAccountReadOnly {
+export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
   /**
    * Creates a new ton read-only wallet account.
    *
