@@ -1,33 +1,25 @@
-/** @implements {IWalletAccount} */
-export default class WalletAccountTon implements IWalletAccount {
+export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
     /**
-     * Creates a new ton wallet account.
+     * Creates a new ton read-only wallet account.
      *
-     * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
-     * @param {string} path - The BIP-44 derivation path (e.g. "0'/0/0").
-     * @param {TonWalletConfig} [config] - The configuration object.
+     * @param {string | Uint8Array} publicKey - The account's public key.
+     * @param {Omit<TonWalletConfig, 'transferMaxFee'>} [config] - The configuration object.
      */
-    constructor(seed: string | Uint8Array, path: string, config?: TonWalletConfig);
+    constructor(publicKey: string | Uint8Array, config?: Omit<TonWalletConfig, "transferMaxFee">);
     /**
-     * The ton wallet configuration.
+     * The read-only wallet account configuration.
      *
      * @protected
-     * @type {TonWalletConfig}
+     * @type {Omit<TonWalletConfig, 'transferMaxFee'>}
      */
-    protected _config: TonWalletConfig;
+    protected _config: Omit<TonWalletConfig, "transferMaxFee">;
     /**
-     * The wallet.
+     * The v5r1 wallet.
      *
      * @protected
      * @type {WalletContractV5R1}
      */
     protected _wallet: WalletContractV5R1;
-    /** @private */
-    private _address;
-    /** @private */
-    private _path;
-    /** @private */
-    private _keyPair;
     /**
      * The ton client.
      *
@@ -36,51 +28,12 @@ export default class WalletAccountTon implements IWalletAccount {
      */
     protected _tonClient: TonClient | undefined;
     /**
-     * The contract.
+     * The v5r1 wallet's contract.
      *
      * @protected
      * @type {OpenedContract<WalletContractV5R1> | undefined}
      */
     protected _contract: OpenedContract<WalletContractV5R1> | undefined;
-    /**
-     * The derivation path's index of this account.
-     *
-     * @type {number}
-     */
-    get index(): number;
-    /**
-     * The derivation path of this account (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
-     *
-     * @type {string}
-     */
-    get path(): string;
-    /**
-     * The account's key pair.
-     *
-     * @type {KeyPair}
-     */
-    get keyPair(): KeyPair;
-    /**
-     * Returns the account's address.
-     *
-     * @returns {Promise<string>} The account's address.
-     */
-    getAddress(): Promise<string>;
-    /**
-     * Signs a message.
-     *
-     * @param {string} message - The message to sign.
-     * @returns {Promise<string>} The message's signature.
-     */
-    sign(message: string): Promise<string>;
-    /**
-     * Verifies a message's signature.
-     *
-     * @param {string} message - The original message.
-     * @param {string} signature - The signature to verify.
-     * @returns {Promise<boolean>} True if the signature is valid.
-     */
-    verify(message: string, signature: string): Promise<boolean>;
     /**
      * Returns the account's ton balance.
      *
@@ -95,31 +48,15 @@ export default class WalletAccountTon implements IWalletAccount {
      */
     getTokenBalance(tokenAddress: string): Promise<number>;
     /**
-     * Sends a transaction.
-     *
-     * @param {TonTransaction} tx - The transaction.
-     * @returns {Promise<TransactionResult>} The transaction's result.
-     */
-    sendTransaction(tx: TonTransaction): Promise<TransactionResult>;
-    /**
      * Quotes the costs of a send transaction operation.
      *
-     * @see {sendTransaction}
      * @param {TonTransaction} tx - The transaction.
      * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
      */
     quoteSendTransaction(tx: TonTransaction): Promise<Omit<TransactionResult, "hash">>;
     /**
-     * Transfers a token to another address.
-     *
-     * @param {TransferOptions} options - The transfer's options.
-     * @returns {Promise<TransferResult>} The transfer's result.
-     */
-    transfer(options: TransferOptions): Promise<TransferResult>;
-    /**
      * Quotes the costs of a transfer operation.
      *
-     * @see {transfer}
      * @param {TransferOptions} options - The transfer's options.
      * @returns {Promise<Omit<TransferResult, 'hash'>>} The transfer's quotes.
      */
@@ -132,10 +69,6 @@ export default class WalletAccountTon implements IWalletAccount {
      */
     getTransactionReceipt(hash: string): Promise<TonTransactionReceipt | null>;
     /**
-     * Disposes the wallet account, erasing the private key from the memory.
-     */
-    dispose(): void;
-    /**
      * Returns the jetton wallet address of the given jetton.
      *
      * @protected
@@ -144,25 +77,41 @@ export default class WalletAccountTon implements IWalletAccount {
      */
     protected _getJettonWalletAddress(tokenAddress: string): Promise<Address>;
     /**
-     * Returns the hash of a message.
+     * Creates and returns an internal message to execute the given transaction.
+     *
+     * @protected
+     * @param {TonTransaction} tx - The transaction.
+     * @returns {Promise<MessageRelaxed>} The internal message.
+     */
+    protected _getTransactionMessage({ to, value, bounceable }: TonTransaction): Promise<MessageRelaxed>;
+    /**
+     * Creates and returns an internal message to execute the given token transfer.
+     *
+     * @protected
+     * @param {TransferOptions} options - The transfer's options.
+     * @returns {Promise<MessageRelaxed>} The internal message.
+     */
+    protected _getTokenTransferMessage({ token, recipient, amount }: TransferOptions): Promise<MessageRelaxed>;
+    /**
+     * Creates and returns a v5r1 transfer to execute the given message.
      *
      * @protected
      * @param {MessageRelaxed} message - The message.
-     * @returns {string} The hash.
+     * @returns {Promise<Cell>} The v5r1 transfer.
      */
-    protected _getHash(message: MessageRelaxed): string;
-    /** @private */
-    private _getTransfer;
-    /** @private */
-    private _getTokenTransfer;
-    /** @private */
-    private _getTransferFee;
+    protected _getTransfer(message: MessageRelaxed): Promise<Cell>;
+    /**
+     * Returns the fee of a transfer.
+     *
+     * @protected
+     * @param {Cell} transfer - The transfer.
+     * @returns {Promise<number>} The transfer's fee.
+     */
+    protected _getTransferFee(transfer: Cell): Promise<number>;
 }
 export type OpenedContract<F> = import("@ton/ton").OpenedContract<F>;
 export type MessageRelaxed = import("@ton/ton").MessageRelaxed;
 export type TonTransactionReceipt = import("@ton/ton").Transaction;
-export type IWalletAccount = import("@wdk/wallet").IWalletAccount;
-export type KeyPair = import("@wdk/wallet").KeyPair;
 export type TransactionResult = import("@wdk/wallet").TransactionResult;
 export type TransferOptions = import("@wdk/wallet").TransferOptions;
 export type TransferResult = import("@wdk/wallet").TransferResult;
@@ -195,5 +144,10 @@ export type TonWalletConfig = {
      * - The ton client configuration, or an instance of the {@link TonClient} class.
      */
     tonClient?: TonClientConfig | TonClient;
+    /**
+     * - The maximum fee amount for transfer operations.
+     */
+    transferMaxFee?: number;
 };
-import { Address, TonClient, WalletContractV5R1 } from '@ton/ton';
+import { WalletAccountReadOnly } from '@wdk/wallet';
+import { Address, Cell, TonClient, WalletContractV5R1 } from '@ton/ton';

@@ -1,4 +1,4 @@
-export default class WalletManagerTon {
+export default class WalletManagerTon extends WalletManager {
     /**
      * Creates a new wallet manager for the ton blockchain.
      *
@@ -55,4 +55,5 @@ export default class WalletManagerTon {
 }
 export type FeeRates = import("@wdk/wallet").FeeRates;
 export type TonWalletConfig = import("./wallet-account-ton.js").TonWalletConfig;
+import WalletManager from '@wdk/wallet';
 import WalletAccountTon from './wallet-account-ton.js';

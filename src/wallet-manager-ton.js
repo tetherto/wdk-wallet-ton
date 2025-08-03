@@ -13,7 +13,7 @@
 // limitations under the License.
 'use strict'
 
-import AbstractWalletManager from '@wdk/wallet'
+import WalletManager from '@wdk/wallet'
 
 import WalletAccountTon from './wallet-account-ton.js'
 
@@ -23,7 +23,7 @@ import WalletAccountTon from './wallet-account-ton.js'
 
 const TON_API_URL = 'https://tonapi.io/v2'
 
-export default class WalletManagerTon extends AbstractWalletManager {
+export default class WalletManagerTon extends WalletManager {
   /**
    * Creates a new wallet manager for the ton blockchain.
    *
