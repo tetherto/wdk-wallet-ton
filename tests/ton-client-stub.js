@@ -20,6 +20,10 @@ export default class TonClientStub extends TonClient {
     }
   }
 
+  async getContractState(address) {
+    return { code: null, data: null }
+  }
+
   async estimateExternalMessageFee (_address, _args) {
     const response = { source_fees: { in_fwd_fee: 1, storage_fee: 1, gas_fee: 1, fwd_fee: 1 } }
 

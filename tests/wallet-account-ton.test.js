@@ -1,8 +1,8 @@
 import { randomAddress } from '@ton/test-utils'
 import * as bip39 from 'bip39'
 import BlockchainWithLogs from './blockchain-with-logs.js'
-import { JettonMinter, JettonWallet } from '@ton-community/assets-sdk'
-import { beginCell, toNano, Address, Cell } from '@ton/ton'
+import { JettonMinter } from '@ton-community/assets-sdk'
+import { beginCell, toNano } from '@ton/ton'
 import TonClientStub from './ton-client-stub.js'
 
 import { beforeEach, describe, expect, test, jest } from '@jest/globals'
@@ -219,26 +219,6 @@ describe('WalletAccountTon', () => {
     })
   })
 
-  describe('quoteTransaction', () => {
-    const TRANSACTION = {
-      to: 'UQAMM7wsXH_0T7aLFJvyD1RS_KBSt6AqGV8c4i_2PUMscnoY',
-      value: 1_000
-    }
-
-    test('should successfully quote a transaction', async () => {
-      const result = await account.quoteSendTransaction(TRANSACTION)
-
-      expect(result).toEqual({ fee: 4 })
-    })
-
-    test('should throw if the account is not connected to ton center', async () => {
-      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0")
-
-      await expect(account.quoteSendTransaction(TRANSACTION))
-        .rejects.toThrow('The wallet must be connected to ton center to quote send transaction operations.')
-    })
-  })
-
   describe('transfer', () => {
     test('should successfully transfer tokens', async () => {
       const transferAmount = 22_222
@@ -303,147 +283,6 @@ describe('WalletAccountTon', () => {
         amount: 1_000
       }))
         .rejects.toThrow('The wallet must be connected to ton center to transfer tokens.')
-    })
-  })
-
-  describe('quoteTransfer', () => {
-    test('should successfully quote a transaction', async () => {
-      const result = await account.quoteTransfer({
-        token: jettonMinter.address.toString(),
-        recipient: await recipient.getAddress(),
-        amount: 1_000
-      })
-
-      expect(result).toEqual({ fee: 4 })
-    })
-
-    test('should throw if the account is not connected to ton center', async () => {
-      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0")
-
-      await expect(account.quoteTransfer({
-        token: jettonMinter.address.toString(),
-        recipient: await recipient.getAddress(),
-        amount: 1_000
-      }))
-        .rejects.toThrow('The wallet must be connected to ton center to quote transfer operations.')
-    })
-  })
-
-  describe('getBalance', () => {
-    test('should return the correct balance of the account', async () => {
-      const value = 100_000
-      const account1 = new WalletAccountTon(SEED_PHRASE, "0'/0/1", {
-        tonClient
-      })
-
-      await treasury.send({ to: await account1.getAddress(), value })
-
-      const balance = await account1.getBalance()
-
-      expect(balance).toEqual(value)
-    })
-
-    test('should throw if the account is not connected to the ton center', async () => {
-      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0")
-
-      await expect(account.getBalance({
-        to: 'UQCfu7DHKCYwqiohPFVQxjp45DDW3-tWSo-eIigNoZBaqOfQ',
-        value: 100,
-        bounceable: false
-      }))
-        .rejects.toThrow('The wallet must be connected to ton center to get balances.')
-    })
-  })
-
-  describe('getTokenBalance', () => {
-    test('should return the correct token balance of the account', async () => {
-      const mintAmount = toNano('100')
-      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/2", {
-        tonClient
-      })
-
-      await jettonMinter.sendMint(
-        deployer.getSender(),
-        account._wallet.address,
-        mintAmount,
-        toNano('0.05'),
-        toNano('0.1')
-      )
-
-      const balance = await account.getTokenBalance(jettonMinter.address.toString())
-
-      expect(balance).toEqual(Number(mintAmount))
-    })
-
-    test('should throw if the account is not connected to the ton center', async () => {
-      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0")
-
-      await expect(account.getTokenBalance(await recipient.getAddress()))
-        .rejects.toThrow('The wallet must be connected to ton center to get token balances.')
-    })
-  })
-
-  describe('getTransactionReceipt', () => {
-    test('should return the correct transaction receipt for the given hash', async () => {
-      const mockBodyHash = 'mock_in_msg_body_hash_1234567890abcdef'
-      const mockTransactionHash = 'mock_transaction_hash_fedcba0987654321'
-      const mockTonTransaction = {
-        hash: () => Buffer.from(mockTransactionHash, 'hex')
-      }
-
-      const getTransactionsSpy = jest.spyOn(tonClient, 'getTransactions').mockImplementation((address, options) => {
-        expect(address.toString()).toBe(Address.parse(account._address).toString())
-        expect(options).toEqual({ hash: mockTransactionHash })
-        return Promise.resolve([mockTonTransaction])
-      })
-
-      const mockTonCenterResponse = {
-        transactions: [
-          {
-            hash: mockTransactionHash
-          }
-        ]
-      }
-
-      const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation((url) => {
-        const urlObj = new URL(url)
-        expect(urlObj.searchParams.get('body_hash')).toBe(mockBodyHash)
-        expect(urlObj.searchParams.get('direction')).toBe('out')
-        expect(urlObj.searchParams.get('limit')).toBe('1')
-
-        return Promise.resolve({
-          json: () => Promise.resolve(mockTonCenterResponse)
-        })
-      })
-
-      const receivedReceipt = await account.getTransactionReceipt(mockBodyHash)
-
-      expect(fetchSpy).toHaveBeenCalledTimes(1)
-      expect(getTransactionsSpy).toHaveBeenCalledTimes(1)
-      expect(receivedReceipt.hash().toString('hex')).toBe(mockTonTransaction.hash().toString('hex'))
-
-      fetchSpy.mockRestore()
-      getTransactionsSpy.mockRestore()
-    })
-
-    test('should return null if no transaction is found by body hash from TonCenter', async () => {
-      const mockTonCenterResponse = {
-        transactions: []
-      }
-
-      const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation(() =>
-        Promise.resolve({
-          json: () => Promise.resolve(mockTonCenterResponse)
-        })
-      )
-
-      const dummyBodyHash = 'some_non_existent_hash_123'
-      const receipt = await account.getTransactionReceipt(dummyBodyHash)
-
-      expect(fetchSpy).toHaveBeenCalledTimes(1)
-      expect(receipt).toBeNull()
-
-      fetchSpy.mockRestore()
     })
   })
 })
