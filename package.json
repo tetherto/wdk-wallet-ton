@@ -22,9 +22,9 @@
     "tweetnacl": "1.0.3"
   },
   "devDependencies": {
-    "@ton-community/assets-sdk": "^0.0.5",
-    "@ton/sandbox": "^0.32.2",
-    "@ton/test-utils": "^0.7.0",
+    "@ton-community/assets-sdk": "0.0.5",
+    "@ton/sandbox": "0.32.2",
+    "@ton/test-utils": "0.7.0",
     "cross-env": "7.0.3",
     "jest": "29.7.0",
     "rimraf": "6.0.1",

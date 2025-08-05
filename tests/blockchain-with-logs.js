@@ -4,24 +4,31 @@ export default class BlockchainWithLogs extends Blockchain {
   constructor (opts) {
     super(opts)
 
-    this.transactions = []
+    this._transactions = []
+  }
+
+  get transactions () {
+    return this._transactions
+  }
+
+  get lastTransaction () {
+    return this._transactions.at(-1)
   }
 
   openContract (contract) {
-    const openedContract = super.openContract(contract)
-    const loggedTransactions = this.transactions
+    const sandboxContract = super.openContract(contract)
 
-    return new Proxy(openedContract, {
+    const transactions = this._transactions
+
+    return new Proxy(sandboxContract, {
       get (target, prop) {
         const original = target[prop]
 
-        if (typeof prop === 'string' && prop.startsWith('send') && typeof original === 'function') {
+        if (typeof original === 'function' && typeof prop === 'string' && prop.startsWith('send')) {
           return async (...args) => {
             const result = await original.apply(target, args)
 
-            if (result && Array.isArray(result.transactions)) {
-              loggedTransactions.push(...result.transactions)
-            }
+            transactions.push(...result.transactions)
 
             return result
           }

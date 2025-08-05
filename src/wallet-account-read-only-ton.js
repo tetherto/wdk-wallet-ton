@@ -196,7 +196,6 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
   async getTransactionReceipt (hash) {
     const query = new URLSearchParams({
       body_hash: hash,
-      direction: 'out',
       limit: 1
     })
 
@@ -253,7 +252,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
 
     const message = internal({
       to,
-      value: fromNano(value).toString(),
+      value: fromNano(value),
       bounce: bounceable ?? isBounceable,
       body: 'Transfer'
     })

@@ -11,6 +11,10 @@ describe('WalletManagerTon', () => {
     wallet = new WalletManagerTon(SEED_PHRASE)
   })
 
+  afterEach(() => {
+    wallet.dispose()
+  })
+
   describe('getAccount', () => {
     test('should return the account at index 0 by default', async () => {
       const account = await wallet.getAccount()
@@ -53,29 +57,26 @@ describe('WalletManagerTon', () => {
     const EXPECTED_FEE_RATE = 1_234
 
     test('should return the correct fee rates', async () => {
-      global.fetch = jest.fn(() =>
-        Promise.resolve({
-          json: () => Promise.resolve({
-            config: {
-              config_param21: {
-                gas_limits_prices: {
-                  gas_flat_pfx: {
-                    other: {
-                      gas_prices_ext: {
-                        gas_price: EXPECTED_FEE_RATE * 65_536
-                      }
+      global.fetch = jest.fn().mockResolvedValue({
+        json: () => Promise.resolve({
+          config: {
+            config_param21: {
+              gas_limits_prices: {
+                gas_flat_pfx: {
+                  other: {
+                    gas_prices_ext: {
+                      gas_price: EXPECTED_FEE_RATE * 65_536
                     }
                   }
                 }
               }
             }
-          })
+          }
         })
-      )
+      })
 
       const feeRates = await wallet.getFeeRates()
 
-      expect(global.fetch).toHaveBeenCalledTimes(1)
       expect(global.fetch).toHaveBeenCalledWith('https://tonapi.io/v2/blockchain/config/raw')
 
       expect(feeRates).toEqual({

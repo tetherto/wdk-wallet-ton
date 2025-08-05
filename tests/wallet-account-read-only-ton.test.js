@@ -1,205 +1,237 @@
-import BlockchainWithLogs from './blockchain-with-logs.js'
-import { JettonMinter } from '@ton-community/assets-sdk'
-import { beginCell, toNano, Address } from '@ton/ton'
-import TonClientStub from './ton-client-stub.js'
-
 import { beforeEach, describe, expect, test, jest } from '@jest/globals'
+import { beginCell, Address, SendMode, internal, fromNano } from '@ton/ton'
+import { JettonMinter } from '@ton-community/assets-sdk'
+
+import BlockchainWithLogs from './blockchain-with-logs.js'
+import FakeTonClient, { ACTIVE_ACCOUNT_FEE, UNINITIALIZED_ACCOUNT_FEE } from './fake-ton-client.js'
 
 import { WalletAccountReadOnlyTon } from '../index.js'
 
-const ACCOUNT_PUBLIC_KEY_1 = new Uint8Array(Buffer.from('f2ade24192b5a0fba669da730d105088a3a848519f43b27f24bdd8395eb26b8f', 'hex'))
-const ACCOUNT_PUBLIC_KEY_2 = new Uint8Array(Buffer.from('358c3ff65d9a70250257330c6881228b09ca4d5fab6e0bea6f4f55b8eaf4f895', 'hex'))
-const ACCOUNT_PUBLIC_KEY_3 = new Uint8Array(Buffer.from('a2ade24192b5a0fba669da730d105088a3a848519f43b27f24bdd8395eb26b8c', 'hex'))
+const PUBLIC_KEY = 'f2ade24192b5a0fba669da730d105088a3a848519f43b27f24bdd8395eb26b8f'
+const PRIVATE_KEY = '904a9fec5f3e5bea8f1b4c5180828843e6acd58c198967fd56b4159b44b5a68ef2ade24192b5a0fba669da730d105088a3a848519f43b27f24bdd8395eb26b8f'
+
+const ACCOUNT = {
+  address: 'UQAvTZZjLwb1qnnuP1szbILyQyZT2zpSRX_Bw-fh4O9QojNi',
+  keyPair: {
+    publicKey: Buffer.from(PUBLIC_KEY, 'hex'),
+    privateKey: Buffer.from(PRIVATE_KEY, 'hex')
+  }
+}
+
+const TREASURY_BALANCE = 1_000_000_000_000n
+
+const INITIAL_BALANCE = 1_000_000_000
+const INITIAL_TOKEN_BALANCE = 100_000
+const ACCOUNT_INITIALIZATION_GAS_COST = 218_400
+
+async function deployTestToken (blockchain, deployer) {
+  const jettonMinter = JettonMinter.createFromConfig({
+    admin: deployer.address,
+    content: beginCell().storeStringTail('TestToken').endCell()
+  })
+
+  const testToken = blockchain.openContract(jettonMinter)
+
+  await testToken.sendDeploy(deployer.getSender())
+
+  return testToken
+}
 
 describe('WalletAccountReadOnlyTon', () => {
-  let tonClient, account, blockchain, jettonMinter, treasury, deployer, recipient
+  let blockchain, treasury, testToken, account
+
+  async function sendTonsTo (to, value, options = { }) {
+    await treasury.send({ to: Address.parse(to), value: BigInt(value), init: options.init })
+  }
+
+  async function sendTestTokensTo (to, value) {
+    await testToken.sendMint(treasury.getSender(), Address.parse(to), BigInt(value))
+  }
 
   beforeEach(async () => {
     blockchain = await BlockchainWithLogs.create()
-    treasury = await blockchain.treasury('treasury')
-    tonClient = new TonClientStub(blockchain)
-    deployer = await blockchain.treasury('deployer')
-    jettonMinter = blockchain.openContract(JettonMinter.createFromConfig({
-      admin: deployer.address,
-      content: beginCell().storeStringTail('TestToken').endCell()
-    }))
+    treasury = await blockchain.treasury('treasury', { balance: TREASURY_BALANCE })
+    testToken = await deployTestToken(blockchain, treasury)
 
-    await jettonMinter.sendDeploy(deployer.getSender(), toNano(0.05))
-
-    account = new WalletAccountReadOnlyTon(ACCOUNT_PUBLIC_KEY_1, {
-      tonClient
-    })
-    recipient = new WalletAccountReadOnlyTon(ACCOUNT_PUBLIC_KEY_2, {
-      tonClient
-    })
+    const tonClient = new FakeTonClient(blockchain)
+    account = new WalletAccountReadOnlyTon(ACCOUNT.keyPair.publicKey, { tonClient })
   })
 
   describe('getAddress', () => {
     test('should return the correct address', async () => {
       const address = await account.getAddress()
 
-      expect(address).toBe('UQAvTZZjLwb1qnnuP1szbILyQyZT2zpSRX_Bw-fh4O9QojNi')
-    })
-  })
-
-  describe('quoteTransaction', () => {
-    const TRANSACTION = {
-      to: 'UQAMM7wsXH_0T7aLFJvyD1RS_KBSt6AqGV8c4i_2PUMscnoY',
-      value: 1_000
-    }
-
-    test('should successfully quote a transaction', async () => {
-      const result = await account.quoteSendTransaction(TRANSACTION)
-
-      expect(result).toEqual({ fee: 4 })
-    })
-
-    test('should throw if the account is not connected to ton center', async () => {
-      const account = new WalletAccountReadOnlyTon(ACCOUNT_PUBLIC_KEY_1)
-
-      await expect(account.quoteSendTransaction(TRANSACTION))
-        .rejects.toThrow('The wallet must be connected to ton center to quote send transaction operations.')
-    })
-  })
-
-  describe('quoteTransfer', () => {
-    test('should successfully quote a transaction', async () => {
-      const result = await account.quoteTransfer({
-        token: jettonMinter.address.toString(),
-        recipient: await recipient.getAddress(),
-        amount: 1_000
-      })
-
-      expect(result).toEqual({ fee: 4 })
-    })
-
-    test('should throw if the account is not connected to ton center', async () => {
-      const account = new WalletAccountReadOnlyTon(ACCOUNT_PUBLIC_KEY_1)
-
-      await expect(account.quoteTransfer({
-        token: jettonMinter.address.toString(),
-        recipient: await recipient.getAddress(),
-        amount: 1_000
-      }))
-        .rejects.toThrow('The wallet must be connected to ton center to quote transfer operations.')
+      expect(address).toBe(ACCOUNT.address)
     })
   })
 
   describe('getBalance', () => {
     test('should return the correct balance of the account', async () => {
-      const value = 100_000
-      const account = new WalletAccountReadOnlyTon(ACCOUNT_PUBLIC_KEY_3, {
-        tonClient
-      })
-
-      await treasury.send({ to: await account.getAddress(), value })
+      await sendTonsTo(ACCOUNT.address, INITIAL_BALANCE, { init: account._wallet.init })
 
       const balance = await account.getBalance()
 
-      expect(balance).toEqual(value)
+      expect(balance).toEqual(INITIAL_BALANCE - ACCOUNT_INITIALIZATION_GAS_COST)
     })
 
     test('should throw if the account is not connected to the ton center', async () => {
-      const account = new WalletAccountReadOnlyTon(ACCOUNT_PUBLIC_KEY_1)
+      const account = new WalletAccountReadOnlyTon(ACCOUNT.keyPair.publicKey)
 
-      await expect(account.getBalance({
-        to: 'UQCfu7DHKCYwqiohPFVQxjp45DDW3-tWSo-eIigNoZBaqOfQ',
-        value: 100,
-        bounceable: false
-      }))
+      await expect(account.getBalance())
         .rejects.toThrow('The wallet must be connected to ton center to get balances.')
     })
   })
 
   describe('getTokenBalance', () => {
     test('should return the correct token balance of the account', async () => {
-      const mintAmount = toNano('100')
-      const account = new WalletAccountReadOnlyTon(ACCOUNT_PUBLIC_KEY_3, {
-        tonClient
-      })
+      await sendTestTokensTo(ACCOUNT.address, INITIAL_TOKEN_BALANCE)
 
-      await jettonMinter.sendMint(
-        deployer.getSender(),
-        account._wallet.address,
-        mintAmount,
-        toNano('0.05'),
-        toNano('0.1')
-      )
+      const balance = await account.getTokenBalance(testToken.address.toString())
 
-      const balance = await account.getTokenBalance(jettonMinter.address.toString())
-
-      expect(balance).toEqual(Number(mintAmount))
+      expect(balance).toEqual(INITIAL_TOKEN_BALANCE)
     })
 
     test('should throw if the account is not connected to the ton center', async () => {
-      const account = new WalletAccountReadOnlyTon(ACCOUNT_PUBLIC_KEY_1)
+      const account = new WalletAccountReadOnlyTon(ACCOUNT.keyPair.publicKey)
 
-      await expect(account.getTokenBalance(jettonMinter.address.toString()))
+      await expect(account.getTokenBalance(testToken.address.toString()))
         .rejects.toThrow('The wallet must be connected to ton center to get token balances.')
     })
   })
 
-  describe('getTransactionReceipt', () => {
-    test('should return the correct transaction receipt for the given hash', async () => {
-      const mockBodyHash = 'mock_in_msg_body_hash_1234567890abcdef'
-      const mockTransactionHash = 'mock_transaction_hash_fedcba0987654321'
-      const mockTonTransaction = {
-        hash: () => Buffer.from(mockTransactionHash, 'hex')
+  describe('quoteTransaction', () => {
+    test('should successfully quote a transaction for an uninitialized account', async () => {
+      const TRANSACTION = {
+        to: 'UQAMM7wsXH_0T7aLFJvyD1RS_KBSt6AqGV8c4i_2PUMscnoY',
+        value: 1_000
       }
 
-      const getTransactionsSpy = jest.spyOn(tonClient, 'getTransactions').mockImplementation((address, options) => {
-        expect(address.toString()).toBe(Address.parse(account._address).toString())
-        expect(options).toEqual({ hash: mockTransactionHash })
-        return Promise.resolve([mockTonTransaction])
-      })
+      const { fee } = await account.quoteSendTransaction(TRANSACTION)
 
-      const mockTonCenterResponse = {
-        transactions: [
-          {
-            hash: mockTransactionHash
-          }
-        ]
-      }
-
-      const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation((url) => {
-        const urlObj = new URL(url)
-        expect(urlObj.searchParams.get('body_hash')).toBe(mockBodyHash)
-        expect(urlObj.searchParams.get('direction')).toBe('out')
-        expect(urlObj.searchParams.get('limit')).toBe('1')
-
-        return Promise.resolve({
-          json: () => Promise.resolve(mockTonCenterResponse)
-        })
-      })
-
-      const receivedReceipt = await account.getTransactionReceipt(mockBodyHash)
-
-      expect(fetchSpy).toHaveBeenCalledTimes(1)
-      expect(getTransactionsSpy).toHaveBeenCalledTimes(1)
-      expect(receivedReceipt.hash().toString('hex')).toBe(mockTonTransaction.hash().toString('hex'))
-
-      fetchSpy.mockRestore()
-      getTransactionsSpy.mockRestore()
+      expect(fee).toEqual(UNINITIALIZED_ACCOUNT_FEE)
     })
 
-    test('should return null if no transaction is found by body hash from TonCenter', async () => {
-      const mockTonCenterResponse = {
-        transactions: []
+    test('should successfully quote a transaction for an active account', async () => {
+      const TRANSACTION = {
+        to: 'UQAMM7wsXH_0T7aLFJvyD1RS_KBSt6AqGV8c4i_2PUMscnoY',
+        value: 1_000
       }
 
-      const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation(() =>
-        Promise.resolve({
-          json: () => Promise.resolve(mockTonCenterResponse)
+      await sendTonsTo(ACCOUNT.address, INITIAL_BALANCE, { init: account._wallet.init })
+
+      const { fee } = await account.quoteSendTransaction(TRANSACTION)
+
+      expect(fee).toEqual(ACTIVE_ACCOUNT_FEE)
+    })
+
+    test('should throw if the account is not connected to ton center', async () => {
+      const account = new WalletAccountReadOnlyTon(ACCOUNT.keyPair.publicKey)
+
+      await expect(account.quoteSendTransaction({ }))
+        .rejects.toThrow('The wallet must be connected to ton center to quote send transaction operations.')
+    })
+  })
+
+  describe('quoteTransfer', () => {
+    test('should successfully quote a transaction for an unitialized account', async () => {
+      const TRANSFER = {
+        token: testToken.address.toString(),
+        recipient: 'UQAMM7wsXH_0T7aLFJvyD1RS_KBSt6AqGV8c4i_2PUMscnoY',
+        amount: 1_000
+      }
+
+      const result = await account.quoteTransfer(TRANSFER)
+
+      expect(result).toEqual({ fee: UNINITIALIZED_ACCOUNT_FEE })
+    })
+
+    test('should successfully quote a transaction for an active account', async () => {
+      const TRANSFER = {
+        token: testToken.address.toString(),
+        recipient: 'UQAMM7wsXH_0T7aLFJvyD1RS_KBSt6AqGV8c4i_2PUMscnoY',
+        amount: 1_000
+      }
+
+      await sendTonsTo(ACCOUNT.address, INITIAL_BALANCE, { init: account._wallet.init })
+      
+      const result = await account.quoteTransfer(TRANSFER)
+
+      expect(result).toEqual({ fee: ACTIVE_ACCOUNT_FEE })
+    })
+
+    test('should throw if the account is not connected to ton center', async () => {
+      const account = new WalletAccountReadOnlyTon(ACCOUNT.keyPair.publicKey)
+
+      await expect(account.quoteTransfer({ }))
+        .rejects.toThrow('The wallet must be connected to ton center to quote transfer operations.')
+    })
+  })
+
+  describe('getTransactionReceipt', () => {
+    async function sendTransaction (to, value) {
+      const { isBounceable } = Address.parseFriendly(to)
+
+      const message = internal({
+        to,
+        value: fromNano(value),
+        bounce: isBounceable,
+        body: 'Transfer'
+      })
+
+      const transfer = await account._contract.createTransfer({
+        seqno: 0,
+        secretKey: ACCOUNT.keyPair.privateKey,
+        sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+        messages: [message]
+      })
+
+      await account._contract.send(transfer)
+
+      return blockchain.lastTransaction.hash()
+    }
+
+    test('should return the correct transaction receipt for the given hash', async () => {
+      await sendTonsTo(ACCOUNT.address, INITIAL_BALANCE, { init: account._wallet.init })
+
+      const MESSAGE_HASH = 'e3dafa8c96cee59affae9a9ce1c1ac0661ba2b041bee6b46fd188f61ee70582a'
+
+      const BOUNCEABLE_ADDRESS = Address.parse(ACCOUNT.address).toString()
+
+      const hash = await sendTransaction('EQBP4mzpDIywL1SV-Wp9ZuBBlzprR9eXQgSYGEXiUEHm7yYF', 100_000)
+
+      global.fetch = jest.fn().mockResolvedValue({
+        json: () => Promise.resolve({
+          transactions: [{
+            hash: hash.toString('hex')
+          }]
         })
-      )
+      })
 
-      const dummyBodyHash = 'some_non_existent_hash_123'
-      const receipt = await account.getTransactionReceipt(dummyBodyHash)
+      const receipt = await account.getTransactionReceipt(MESSAGE_HASH)
 
-      expect(fetchSpy).toHaveBeenCalledTimes(1)
-      expect(receipt).toBeNull()
+      expect(global.fetch).toHaveBeenCalledWith(`https://toncenter.com/api/v3/transactionsByMessage?body_hash=${MESSAGE_HASH}&limit=1`)
 
-      fetchSpy.mockRestore()
+      expect(receipt.hash()).toBe(hash)
+
+      expect(receipt.inMessage.info.src.toString()).toBe(BOUNCEABLE_ADDRESS)
+      expect(receipt.inMessage.info.dest.toString()).toBe('EQBP4mzpDIywL1SV-Wp9ZuBBlzprR9eXQgSYGEXiUEHm7yYF')
+      expect(receipt.inMessage.info.value.coins).toBe(100_000n)
+    })
+
+    test('should return null if the transaction has not been included in a block yet', async () => {
+      const MESSAGE_HASH = 'e3dafa8c96cee59affae9a9ce1c1ac0661ba2b041bee6b46fd188f61ee70582a'
+
+      global.fetch = jest.fn().mockResolvedValue({
+        json: () => Promise.resolve({
+          transactions: [ ]
+        })
+      })
+
+      const receipt = await account.getTransactionReceipt(MESSAGE_HASH)
+
+      expect(global.fetch).toHaveBeenCalledWith(`https://toncenter.com/api/v3/transactionsByMessage?body_hash=${MESSAGE_HASH}&limit=1`)
+
+      expect(receipt).toBe(null)
     })
   })
 })
