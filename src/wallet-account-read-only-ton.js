@@ -17,6 +17,8 @@ import { WalletAccountReadOnly } from '@wdk/wallet'
 
 import { Address, beginCell, Cell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
 
+import { v4 as uuidv4 } from 'uuid'
+
 /** @typedef {import('@ton/ton').OpenedContract} OpenedContract */
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
 /** @typedef {import('@ton/ton').Transaction} TonTransactionReceipt */
@@ -254,7 +256,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
       to,
       value: fromNano(value),
       bounce: bounceable ?? isBounceable,
-      body: 'Transfer'
+      body: this._generateUniqueMessageBody()
     })
 
     return message
@@ -272,6 +274,8 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
 
     const address = this._wallet.address
 
+    const messageBody = this._generateUniqueMessageBody()
+
     const jettonWalletAddress = await this._getJettonWalletAddress(token)
 
     const body = beginCell()
@@ -282,7 +286,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
       .storeAddress(address)
       .storeBit(false)
       .storeCoins(1n)
-      .storeMaybeRef()
+      .storeMaybeRef(messageBody)
       .endCell()
 
     const message = internal({
@@ -338,5 +342,15 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
     const { in_fwd_fee, storage_fee, gas_fee, fwd_fee } = source_fees
 
     return in_fwd_fee + storage_fee + gas_fee + fwd_fee
+  }
+
+  /** @private */
+  _generateUniqueMessageBody () {
+    const messageBody = beginCell()
+      .storeUint(0, 32)
+      .storeStringTail(uuidv4())
+      .endCell()
+
+    return messageBody
   }
 }

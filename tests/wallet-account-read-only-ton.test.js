@@ -153,7 +153,7 @@ describe('WalletAccountReadOnlyTon', () => {
       }
 
       await sendTonsTo(ACCOUNT.address, INITIAL_BALANCE, { init: account._wallet.init })
-      
+
       const result = await account.quoteTransfer(TRANSFER)
 
       expect(result).toEqual({ fee: ACTIVE_ACCOUNT_FEE })
@@ -223,7 +223,7 @@ describe('WalletAccountReadOnlyTon', () => {
 
       global.fetch = jest.fn().mockResolvedValue({
         json: () => Promise.resolve({
-          transactions: [ ]
+          transactions: []
         })
       })
 
