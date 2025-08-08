@@ -1,13 +1,22 @@
-import { beforeEach, describe, expect, test } from '@jest/globals'
+import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals'
 
 import { Address, beginCell } from '@ton/ton'
 import { JettonMinter } from '@ton-community/assets-sdk'
+import * as uuid from 'uuid'
+
 import * as bip39 from 'bip39'
 
 import BlockchainWithLogs from './blockchain-with-logs.js'
 import FakeTonClient, { ACTIVE_ACCOUNT_FEE } from './fake-ton-client.js'
 
-import { WalletAccountReadOnlyTon, WalletAccountTon } from '../index.js'
+const uuidv4Mock = jest.fn()
+
+await jest.unstable_mockModule('uuid', () => ({
+  ...uuid,
+  v4: uuidv4Mock
+}))
+
+const { WalletAccountReadOnlyTon, WalletAccountTon } = await import('../index.js')
 
 const SEED_PHRASE = 'cook voyage document eight skate token alien guide drink uncle term abuse'
 const INVALID_SEED_PHRASE = 'invalid seed phrase'
@@ -37,6 +46,8 @@ const TREASURY_BALANCE = 1_000_000_000_000n
 const INITIAL_BALANCE = 1_000_000_000
 const INITIAL_TOKEN_BALANCE = 100_000
 
+const DUMMY_UUID_V4 = '1ebd0796-db99-4b45-a0c1-7fd9be0ddfda'
+
 async function deployTestToken (blockchain, deployer) {
   const jettonMinter = JettonMinter.createFromConfig({
     admin: deployer.address,
@@ -52,7 +63,7 @@ async function deployTestToken (blockchain, deployer) {
 
 describe('WalletAccountTon', () => {
   let blockchain, treasury, testToken, tonClient, account, recipient
-  
+
   async function sendTonsTo (to, value, options = { }) {
     await treasury.send({ to: Address.parse(to), value: BigInt(value), init: options.init })
   }
@@ -163,6 +174,8 @@ describe('WalletAccountTon', () => {
         value: 1_000_000
       }
 
+      uuidv4Mock.mockImplementation(() => DUMMY_UUID_V4)
+
       const { hash, fee } = await account.sendTransaction(TRANSACTION)
 
       expect(blockchain.transactions).toHaveTransaction({
@@ -172,7 +185,7 @@ describe('WalletAccountTon', () => {
         success: true
       })
 
-      expect(hash).toBe('e3dafa8c96cee59affae9a9ce1c1ac0661ba2b041bee6b46fd188f61ee70582a')
+      expect(hash).toBe('731189bbe84a4e9b72ff6a5e83259a194b123a6215418eb483cb3ec41fd097e3')
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
     })
@@ -184,6 +197,8 @@ describe('WalletAccountTon', () => {
         bounceable: true
       }
 
+      uuidv4Mock.mockImplementation(() => DUMMY_UUID_V4)
+
       const { hash, fee } = await account.sendTransaction(TRANSACTION)
 
       expect(blockchain.transactions).toHaveTransaction({
@@ -194,7 +209,7 @@ describe('WalletAccountTon', () => {
         success: true
       })
 
-      expect(hash).toBe('e3dafa8c96cee59affae9a9ce1c1ac0661ba2b041bee6b46fd188f61ee70582a')
+      expect(hash).toBe('731189bbe84a4e9b72ff6a5e83259a194b123a6215418eb483cb3ec41fd097e3')
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
     })
@@ -215,12 +230,19 @@ describe('WalletAccountTon', () => {
         amount: 1_000
       }
 
+      uuidv4Mock.mockImplementation(() => DUMMY_UUID_V4)
+
       const { hash, fee } = await account.transfer(TRANSFER)
 
       const accountJettonWalletAddress = await testToken.getWalletAddress(account._wallet.address)
-      
+
       const recipientJettonWalletAddress = await testToken.getWalletAddress(Address.parse(TRANSFER.recipient))
-      
+
+      const messageBody = beginCell()
+        .storeUint(0, 32)
+        .storeStringTail(DUMMY_UUID_V4)
+        .endCell()
+
       const internalTransferBody = beginCell()
         .storeUint(0x0f8a7ea5, 32)
         .storeUint(0, 64)
@@ -229,7 +251,7 @@ describe('WalletAccountTon', () => {
         .storeAddress(account._wallet.address)
         .storeBit(false)
         .storeCoins(1n)
-        .storeMaybeRef()
+        .storeMaybeRef(messageBody)
         .endCell()
 
       expect(blockchain.transactions).toHaveTransaction({
@@ -245,7 +267,7 @@ describe('WalletAccountTon', () => {
         success: true
       })
 
-      expect(hash).toBe('f3d7465af4e6421828fd1f02fb816b39510824808db3cda49a7b166a1a1bcff5')
+      expect(hash).toBe('ae9694ebfad8527c14d286bf601c837a97b0e4dd56afdc8fbf067ed8c73e7fd1')
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
     })

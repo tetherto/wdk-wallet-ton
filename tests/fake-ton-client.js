@@ -19,7 +19,7 @@ export default class FakeTonClient extends TonClient {
     const result = await this._blockchain.runGetMethod(address, name, stack)
 
     if (result.exitCode !== 0) {
-      throw new Error(`Unable to execute get method. Got exit_code: ${res.exitCode}`)
+      throw new Error(`Unable to execute get method. Got exit_code: ${result.exitCode}`)
     }
 
     return { gasUsed: result.gasUsed, stack: result.stackReader }
