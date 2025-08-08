@@ -108,8 +108,13 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      * @returns {Promise<number>} The transfer's fee.
      */
     protected _getTransferFee(transfer: Cell): Promise<number>;
-    /** @private */
-    private _generateUniqueMessageBody;
+    /**
+     * Generates and returns a message body with a unique comment.
+     *
+     * @protected
+     * @returns {Promise<Cell>} The unique message body.
+     */
+    protected _generateUniqueMessageBody(): Promise<Cell>;
 }
 export type OpenedContract<F> = import("@ton/ton").OpenedContract<F>;
 export type MessageRelaxed = import("@ton/ton").MessageRelaxed;

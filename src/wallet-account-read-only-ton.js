@@ -344,7 +344,12 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
     return in_fwd_fee + storage_fee + gas_fee + fwd_fee
   }
 
-  /** @private */
+  /**
+   * Generates and returns a message body with a unique comment.
+   *
+   * @protected
+   * @returns {Promise<Cell>} The unique message body.
+   */
   _generateUniqueMessageBody () {
     const messageBody = beginCell()
       .storeUint(0, 32)
