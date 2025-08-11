@@ -76,7 +76,6 @@ describe('@wdk/wallet-ton', () => {
   }
 
   beforeEach(async () => {
-    uuidv4Mock.mockClear()
     uuidv4Mock.mockImplementation(() => DUMMY_UUID_V4)
 
     blockchain = await BlockchainWithLogs.create()
