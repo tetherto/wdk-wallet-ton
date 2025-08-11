@@ -1,12 +1,22 @@
-import { beforeEach, describe, expect, test } from '@jest/globals'
+import { beforeEach, describe, expect, jest, test } from '@jest/globals'
 
 import { Address, beginCell } from '@ton/ton'
 import { JettonMinter } from '@ton-community/assets-sdk'
+import * as uuid from 'uuid'
 
 import BlockchainWithLogs from '../blockchain-with-logs.js'
 import FakeTonClient, { ACTIVE_ACCOUNT_FEE } from '../fake-ton-client.js'
 
-import WalletManagerTon, { WalletAccountTon } from '../../index.js'
+const uuidv4Mock = jest.fn(() => '1ebd0796-db99-4b45-a0c1-7fd9be0ddfda')
+
+await jest.unstable_mockModule('uuid', () => ({
+  ...uuid,
+  v4: uuidv4Mock
+}))
+
+const { default: WalletManagerTon, WalletAccountTon } = await import('../../index.js')
+
+const DUMMY_UUID_V4 = '1ebd0796-db99-4b45-a0c1-7fd9be0ddfda'
 
 const SEED_PHRASE = 'cook voyage document eight skate token alien guide drink uncle term abuse'
 
@@ -66,6 +76,9 @@ describe('@wdk/wallet-ton', () => {
   }
 
   beforeEach(async () => {
+    uuidv4Mock.mockClear()
+    uuidv4Mock.mockImplementation(() => DUMMY_UUID_V4)
+
     blockchain = await BlockchainWithLogs.create()
     treasury = await blockchain.treasury('treasury', { balance: TREASURY_BALANCE })
     testToken = await deployTestToken(blockchain, treasury)
@@ -175,6 +188,11 @@ describe('@wdk/wallet-ton', () => {
     const account0JettonWalletAddress = await testToken.getWalletAddress(account0._wallet.address)
     const account1JettonWalletAddress = await testToken.getWalletAddress(account1._wallet.address)
 
+    const messageBody = beginCell()
+      .storeUint(0, 32)
+      .storeStringTail(DUMMY_UUID_V4)
+      .endCell()
+
     const internalTransferBody = beginCell()
       .storeUint(0x0f8a7ea5, 32)
       .storeUint(0, 64)
@@ -183,7 +201,7 @@ describe('@wdk/wallet-ton', () => {
       .storeAddress(account0._wallet.address)
       .storeBit(false)
       .storeCoins(1n)
-      .storeMaybeRef()
+      .storeMaybeRef(messageBody)
       .endCell()
 
     expect(blockchain.transactions).toHaveTransaction({
@@ -218,6 +236,11 @@ describe('@wdk/wallet-ton', () => {
     const account0JettonWalletAddress = await testToken.getWalletAddress(account0._wallet.address)
     const account1JettonWalletAddress = await testToken.getWalletAddress(account1._wallet.address)
 
+    const messageBody = beginCell()
+      .storeUint(0, 32)
+      .storeStringTail(DUMMY_UUID_V4)
+      .endCell()
+
     const internalTransferBody = beginCell()
       .storeUint(0x0f8a7ea5, 32)
       .storeUint(0, 64)
@@ -226,7 +249,7 @@ describe('@wdk/wallet-ton', () => {
       .storeAddress(account0._wallet.address)
       .storeBit(false)
       .storeCoins(1n)
-      .storeMaybeRef()
+      .storeMaybeRef(messageBody)
       .endCell()
 
     expect(blockchain.transactions).toHaveTransaction({
