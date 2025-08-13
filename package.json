@@ -12,6 +12,16 @@
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
     "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage"
   },
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "bare": "./bare.js",
+      "default": "./index.js"
+    },
+    "./package": {
+      "default": "./package.json"
+    },
+  }
   "dependencies": {
     "@ton/crypto": "3.3.0",
     "@ton/ton": "15.2.1",
@@ -32,13 +42,5 @@
     "rimraf": "6.0.1",
     "standard": "17.1.2",
     "typescript": "5.8.3"
-  },
-  "exports": {
-    ".": {
-      "bare": "./bare.js",
-      "types": "./types/index.d.ts",
-      "default": "./index.js"
-    },
-    "./package": "./package.json"
   }
 }
