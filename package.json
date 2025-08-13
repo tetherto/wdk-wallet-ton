@@ -37,7 +37,7 @@
     ".": {
       "bare": "./bare.js",
       "types": "./types/index.d.ts",
-      "default": "./index.js",
+      "default": "./index.js"
     },
     "./package": "./package.json"
   }
