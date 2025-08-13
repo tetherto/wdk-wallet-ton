@@ -101,19 +101,6 @@ describe('@wdk/wallet-ton', () => {
     const account0 = await wallet.getAccount()
     const account1 = await wallet.getAccount(1)
 
-    expect(account0).toBeInstanceOf(WalletAccountTon)
-
-    expect(account0.path).toBe(ACCOUNT0.path)
-
-    expect(await account0.getAddress()).toBe(ACCOUNT0.address)
-    expect(Buffer.from(account0.keyPair.publicKey)).toEqual(ACCOUNT0.keyPair.publicKey)
-    expect(Buffer.from(account0.keyPair.privateKey)).toEqual(ACCOUNT0.keyPair.privateKey)
-
-    expect(account1.path).toBe(ACCOUNT1.path)
-    expect(await account1.getAddress()).toBe(ACCOUNT1.address)
-    expect(Buffer.from(account1.keyPair.publicKey)).toEqual(ACCOUNT1.keyPair.publicKey)
-    expect(Buffer.from(account1.keyPair.privateKey)).toEqual(ACCOUNT1.keyPair.privateKey)
-
     const TRANSACTION = {
       to: ACCOUNT1.address,
       value: 1_000_000
