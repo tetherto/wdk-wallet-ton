@@ -16,6 +16,7 @@
     "@ton/crypto": "3.3.0",
     "@ton/ton": "15.2.1",
     "@wdk/wallet": "https://github.com/tetherto/wdk-wallet#develop",
+    "bare-wdk-runtime": "2.0.0",
     "bip39": "3.1.0",
     "micro-key-producer": "0.7.6",
     "sodium-universal": "5.0.1",
@@ -31,5 +32,15 @@
     "rimraf": "6.0.1",
     "standard": "17.1.2",
     "typescript": "5.8.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "bare": "./bare.js",
+      "default": "./index.js"
+    },
+    "./package": {
+      "default": "./package.json"
+    }
   }
 }
