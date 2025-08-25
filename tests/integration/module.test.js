@@ -204,7 +204,7 @@ describe('@wdk/wallet-ton', () => {
     })
   })
 
-  test('should derive two accounts by their paths, transfer a token from account 1 to 2 and get the correct balances and token balances', async () => {
+  test('should derive two accounts by their paths, transfer a token from account 0 to 1 and get the correct balances and token balances', async () => {
     const account0 = await wallet.getAccountByPath("0'/0/0")
     const account1 = await wallet.getAccountByPath("0'/0/1")
 
