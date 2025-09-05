@@ -80,8 +80,8 @@ describe('WalletManagerTon', () => {
       expect(global.fetch).toHaveBeenCalledWith('https://tonapi.io/v2/blockchain/config/raw')
 
       expect(feeRates).toEqual({
-        normal: EXPECTED_FEE_RATE,
-        fast: EXPECTED_FEE_RATE
+        normal: BigInt(EXPECTED_FEE_RATE),
+        fast: BigInt(EXPECTED_FEE_RATE)
       })
     })
   })

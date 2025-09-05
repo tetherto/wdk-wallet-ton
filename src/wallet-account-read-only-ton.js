@@ -15,10 +15,11 @@
 
 import { WalletAccountReadOnly } from '@wdk/wallet'
 
-import { Address, beginCell, Cell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
+import { Address, beginCell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
 
 import { v4 as uuidv4 } from 'uuid'
 
+/** @typedef {import('@ton/ton').Cell} Cell */
 /** @typedef {import('@ton/ton').OpenedContract} OpenedContract */
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
 /** @typedef {import('@ton/ton').Transaction} TonTransactionReceipt */
@@ -30,7 +31,7 @@ import { v4 as uuidv4 } from 'uuid'
 /**
  * @typedef {Object} TonTransaction
  * @property {string} to - The transaction's recipient.
- * @property {number} value - The amount of tons to send to the recipient (in nanotons).
+ * @property {number | bigint} value - The amount of tons to send to the recipient (in nanotons).
  * @property {boolean} [bounceable] - If set, overrides the bounceability of the transaction.
  */
 
@@ -43,7 +44,7 @@ import { v4 as uuidv4 } from 'uuid'
 /**
  * @typedef {Object} TonWalletConfig
  * @property {TonClientConfig | TonClient} [tonClient] - The ton client configuration, or an instance of the {@link TonClient} class.
- * @property {number} [transferMaxFee] - The maximum fee amount for transfer operations.
+ * @property {number | bigint} [transferMaxFee] - The maximum fee amount for transfer operations.
  */
 
 const DUMMY_MESSAGE_VALUE = toNano(0.05)
@@ -112,7 +113,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
   /**
    * Returns the account's ton balance.
    *
-   * @returns {Promise<number>} The ton balance (in nanotons).
+   * @returns {Promise<bigint>} The ton balance (in nanotons).
    */
   async getBalance () {
     if (!this._tonClient) {
@@ -121,14 +122,14 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
 
     const balance = await this._contract.getBalance()
 
-    return Number(balance)
+    return balance
   }
 
   /**
    * Returns the balance of the account for a specific token.
    *
    * @param {string} tokenAddress - The smart contract address of the token.
-   * @returns {Promise<number>} The token balance (in base unit).
+   * @returns {Promise<bigint>} The token balance (in base unit).
    */
   async getTokenBalance (tokenAddress) {
     if (!this._tonClient) {
@@ -140,12 +141,12 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
 
       const { stack } = await this._tonClient.callGetMethod(jettonWalletAddress, 'get_wallet_data', [])
 
-      const balance = stack.readNumber()
+      const balance = stack.readBigNumber()
 
       return balance
     } catch (error) {
       if (error.message.includes('exit_code: -13')) {
-        return 0
+        return 0n
       }
 
       throw error
@@ -324,7 +325,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    *
    * @protected
    * @param {Cell} transfer - The transfer.
-   * @returns {Promise<number>} The transfer's fee.
+   * @returns {Promise<bigint>} The transfer's fee.
    */
   async _getTransferFee (transfer) {
     /* eslint-disable camelcase */
@@ -341,7 +342,9 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
 
     const { in_fwd_fee, storage_fee, gas_fee, fwd_fee } = source_fees
 
-    return in_fwd_fee + storage_fee + gas_fee + fwd_fee
+    const fee = in_fwd_fee + storage_fee + gas_fee + fwd_fee
+
+    return BigInt(fee)
   }
 
   /**
