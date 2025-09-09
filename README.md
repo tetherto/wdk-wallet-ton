@@ -1,5 +1,7 @@
 # @wdk/wallet-ton
 
+**Note**: This package is currently in beta. Please test thoroughly in development environments before using in production.
+
 A simple and secure package to manage BIP-44 wallets for the TON blockchain. This package provides a clean API for creating, managing, and interacting with TON wallets using BIP-39 seed phrases and TON-specific derivation paths.
 
 ## 🔍 About WDK
@@ -13,50 +15,23 @@ For detailed documentation about the complete WDK ecosystem, visit [docs.wallet.
 - **BIP-39 Seed Phrase Support**: Generate and validate BIP-39 mnemonic seed phrases
 - **TON Derivation Paths**: Support for BIP-44 standard derivation paths for TON (m/44'/607')
 - **Multi-Account Management**: Create and manage multiple accounts from a single seed phrase
-- **TON Address Support**: Generate and manage TON addresses using V5R1 wallet contracts
-- **Message Signing**: Sign and verify messages using TON cryptography
 - **Transaction Management**: Send transactions and get fee estimates
-- **Jetton Support**: Query native TON and Jetton token balances
-- **TypeScript Support**: Full TypeScript definitions included
-- **Memory Safety**: Secure private key management with automatic memory cleanup using sodium-universal
-- **Provider Flexibility**: Support for custom TON RPC endpoints and TON Center API
+- **Jetton Support**: Query native TON and Jetton token balances using smart contract interactions
+- **Message Signing**: Sign and verify messages using TON cryptography
 
 ## ⬇️ Installation
 
 To install the `@wdk/wallet-ton` package, follow these instructions:
 
-### Public Release
-
-Once the package is publicly available, you can install it using npm:
+You can install it using npm:
 
 ```bash
 npm install @wdk/wallet-ton
 ```
 
-### Private Access
-
-If you have access to the private repository, install the package from the develop branch on GitHub:
-
-```bash
-npm install git+https://github.com/tetherto/wdk-wallet-ton.git#develop
-```
-After installation, ensure your package.json includes the dependency correctly:
-
-```json
-"dependencies": {
-  // ... other dependencies ...
-  "@wdk/wallet-ton": "git+ssh://git@github.com:tetherto/wdk-wallet-ton.git#develop"
-  // ... other dependencies ...
-}
-```
-
 ## 🚀 Quick Start
 
 ### Importing from `@wdk/wallet-ton`
-
-1. WalletManagerTon: Main class for managing wallets
-2. WalletAccountTon: Use this for full access accounts
-3. WalletAccountReadOnlyTon: Use this for read-only accounts
 
 ### Creating a New Wallet
 
@@ -64,14 +39,15 @@ After installation, ensure your package.json includes the dependency correctly:
 import WalletManagerTon, { WalletAccountTon, WalletAccountReadOnlyTon } from '@wdk/wallet-ton'
 
 // Use a BIP-39 seed phrase (replace with your own secure phrase)
-const seedPhrase = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
+const seedPhrase = 'test only example nut use this real life secret phrase must random'
 
 // Create wallet manager with TON client config
 const wallet = new WalletManagerTon(seedPhrase, {
   tonClient: {
     url: 'https://toncenter.com/api/v3',
     secretKey: 'your-api-key' // Optional
-  }
+  },
+  transferMaxFee: 1000000000 // Optional: Maximum fee in nanotons
 })
 
 // Get a full access account
@@ -98,9 +74,13 @@ const address1 = await account1.getAddress()
 console.log('Account 1 address:', address1)
 
 // Get account by custom derivation path
+// Full path will be m/44'/607'/0'/0/5
 const customAccount = await wallet.getAccountByPath("0'/0/5")
 const customAddress = await customAccount.getAddress()
 console.log('Custom account address:', customAddress)
+
+// Note: All addresses are TON addresses (EQ... or UQ...)
+// All accounts inherit the provider configuration from the wallet manager
 ```
 
 ### Checking Balances
@@ -115,12 +95,15 @@ import WalletManagerTon from '@wdk/wallet-ton'
 // Assume wallet and account are already created
 // Get native TON balance (in nanotons)
 const balance = await account.getBalance()
-console.log('Native TON balance:', balance, 'nanotons')
+console.log('Native TON balance:', balance, 'nanotons') // 1 TON = 1000000000 nanotons
 
 // Get Jetton token balance
-const jettonAddress = 'EQ...'; // Jetton contract address
-const jettonBalance = await account.getTokenBalance(jettonAddress);
-console.log('Jetton token balance:', jettonBalance);
+const jettonContract = 'EQ...' // Jetton contract address
+const jettonBalance = await account.getTokenBalance(jettonContract);
+console.log('Jetton balance:', jettonBalance);
+
+// Note: TON client is required for balance checks
+// Make sure wallet was created with a tonClient configuration
 ```
 
 #### Read-Only Account
@@ -130,10 +113,8 @@ For addresses where you don't have the seed phrase:
 ```javascript
 import { WalletAccountReadOnlyTon } from '@wdk/wallet-ton'
 
-// Use the public key directly
+// Create a read-only account with public key
 const publicKey = '...'; // Replace with the actual public key
-
-// Create a read-only account
 const readOnlyAccount = new WalletAccountReadOnlyTon(publicKey, {
   tonClient: {
     url: 'https://toncenter.com/api/v3',
@@ -141,9 +122,16 @@ const readOnlyAccount = new WalletAccountReadOnlyTon(publicKey, {
   }
 })
 
-// Check the balance
+// Check native TON balance
 const balance = await readOnlyAccount.getBalance()
-console.log('Read-only account balance:', balance)
+console.log('Native balance:', balance, 'nanotons')
+
+// Check Jetton token balance using contract
+const jettonBalance = await readOnlyAccount.getTokenBalance('EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs') // Example Jetton contract
+console.log('Jetton balance:', jettonBalance)
+
+// Note: Jetton balance checks use the standard Jetton wallet interface
+// Make sure the contract address is correct and implements the Jetton standard
 ```
 
 ### Sending Transactions
@@ -153,8 +141,8 @@ Send TON and estimate fees using `WalletAccountTon`. Requires TON Center client 
 ```javascript
 // Send native TON
 const result = await account.sendTransaction({
-  to: 'EQ...', // TON address
-  value: 1000000000, // 1 TON in nanotons
+  to: 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c', // Example TON address
+  value: 1000000000n, // 1 TON in nanotons
   bounceable: true // Optional: specify if the address is bounceable
 })
 console.log('Transaction hash:', result.hash)
@@ -162,8 +150,8 @@ console.log('Transaction fee:', result.fee, 'nanotons')
 
 // Get transaction fee estimate
 const quote = await account.quoteSendTransaction({
-  to: 'EQ...',
-  value: 1000000000,
+  to: 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c',
+  value: 1000000000n,
   bounceable: true
 });
 console.log('Estimated fee:', quote.fee, 'nanotons');
@@ -171,23 +159,23 @@ console.log('Estimated fee:', quote.fee, 'nanotons');
 
 ### Token Transfers
 
-Transfer Jetton tokens and estimate fees using `WalletAccountTon`. Requires TON Center client configuration.
+Transfer Jetton tokens and estimate fees using `WalletAccountTon`. Uses standard Jetton transfer function.
 
 ```javascript
 // Transfer Jetton tokens
 const transferResult = await account.transfer({
-  token: 'EQ...',      // Jetton contract address
-  recipient: 'EQ...',  // Recipient's TON address
-  amount: 1000000      // Amount in Jetton's base units
+  token: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',      // Jetton contract address
+  recipient: 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c',  // Recipient's TON address
+  amount: 1000000000n     // Amount in Jetton's base units (use BigInt for large numbers)
 });
 console.log('Transfer hash:', transferResult.hash);
 console.log('Transfer fee:', transferResult.fee, 'nanotons');
 
-// Quote token transfer
+// Quote token transfer fee
 const transferQuote = await account.quoteTransfer({
-  token: 'EQ...',      // Jetton contract address
-  recipient: 'EQ...',  // Recipient's TON address
-  amount: 1000000      // Amount in Jetton's base units 
+  token: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',      // Jetton contract address
+  recipient: 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c',  // Recipient's TON address
+  amount: 1000000000n     // Amount in Jetton's base units
 })
 console.log('Transfer fee estimate:', transferQuote.fee, 'nanotons')
 ```
@@ -236,9 +224,9 @@ wallet.dispose()
 
 | Class | Description | Methods |
 |-------|-------------|---------|
-| [WalletManagerTon](#walletmanagerton) | Main class for managing TON wallets | [Constructor](#constructor), [Methods](#methods) |
-| [WalletAccountTon](#walletaccountton) | Individual TON wallet account implementation | [Constructor](#constructor-1), [Methods](#methods-1), [Properties](#properties) |
-| [WalletAccountReadOnlyTon](#walletaccountreadonlyton) | Read-only TON wallet account | [Constructor](#constructor-2), [Methods](#methods-2) |
+| [WalletManagerTon](#walletmanagerton) | Main class for managing TON wallets. Extends `WalletManager` from `@wdk/wallet`. | [Constructor](#constructor), [Methods](#methods) |
+| [WalletAccountTon](#walletaccountton) | Individual TON wallet account implementation. Extends `WalletAccountReadOnlyTon` and implements `IWalletAccount` from `@wdk/wallet`. | [Constructor](#constructor-1), [Methods](#methods-1), [Properties](#properties) |
+| [WalletAccountReadOnlyTon](#walletaccountreadonlyton) | Read-only TON wallet account. Extends `WalletAccountReadOnly` from `@wdk/wallet`. | [Constructor](#constructor-2), [Methods](#methods-2) |
 
 ### WalletManagerTon
 
@@ -253,11 +241,11 @@ new WalletManagerTon(seed, config)
 
 **Parameters:**
 - `seed` (string | Uint8Array): BIP-39 mnemonic seed phrase or seed bytes
-- `config` (object): Configuration object
+- `config` (object, optional): Configuration object
   - `tonClient` (object | TonClient): TON client configuration or instance
     - `url` (string): TON Center API URL (e.g., 'https://toncenter.com/api/v3')
     - `secretKey` (string, optional): API key for TON Center
-  - `transferMaxFee` (number, optional): Maximum fee amount for transfer operations (in nanotons)
+  - `transferMaxFee` (number | bigint, optional): Maximum fee amount for transfer operations (in nanotons)
 
 **Example:**
 ```javascript
@@ -266,7 +254,7 @@ const wallet = new WalletManagerTon(seedPhrase, {
     url: 'https://toncenter.com/api/v3',
     secretKey: 'your-api-key'
   },
-  transferMaxFee: 1000000000 // Maximum fee in nanotons
+  transferMaxFee: '1000000000' // Maximum fee in nanotons
 })
 ```
 
@@ -276,54 +264,8 @@ const wallet = new WalletManagerTon(seedPhrase, {
 |--------|-------------|---------|
 | `getAccount(index)` | Returns a wallet account at the specified index | `Promise<WalletAccountTon>` |
 | `getAccountByPath(path)` | Returns a wallet account at the specified BIP-44 derivation path | `Promise<WalletAccountTon>` |
-| `getFeeRates()` | Returns current fee rates for transactions | `Promise<{normal: number, fast: number}>` |
+| `getFeeRates()` | Returns current fee rates for transactions | `Promise<{normal: bigint, fast: bigint}>` |
 | `dispose()` | Disposes all wallet accounts, clearing private keys from memory | `void` |
-
-##### `getAccount(index)`
-Returns a wallet account at the specified index.
-
-**Parameters:**
-- `index` (number, optional): The index of the account to get (default: 0)
-
-**Returns:** `Promise<WalletAccountTon>` - The wallet account
-
-**Example:**
-```javascript
-const account = await wallet.getAccount(0)
-```
-
-##### `getAccountByPath(path)`
-Returns a wallet account at the specified BIP-44 derivation path.
-
-**Parameters:**
-- `path` (string): The derivation path (e.g., "0'/0/0")
-
-**Returns:** `Promise<WalletAccountTon>` - The wallet account
-
-**Example:**
-```javascript
-const account = await wallet.getAccountByPath("0'/0/1")
-```
-
-##### `getFeeRates()`
-Returns current fee rates for transactions based on blockchain config.
-
-**Returns:** `Promise<FeeRates>` - Object containing normal and fast fee rates (in nanotons)
-
-**Example:**
-```javascript
-const feeRates = await wallet.getFeeRates()
-console.log('Normal fee rate:', feeRates.normal, 'nanotons')
-console.log('Fast fee rate:', feeRates.fast, 'nanotons')
-```
-
-##### `dispose()`
-Disposes all wallet accounts, clearing private keys from memory.
-
-**Example:**
-```javascript
-wallet.dispose()
-```
 
 ### WalletAccountTon
 
@@ -338,11 +280,11 @@ new WalletAccountTon(seed, path, config)
 **Parameters:**
 - `seed` (string | Uint8Array): BIP-39 mnemonic seed phrase or seed bytes
 - `path` (string): BIP-44 derivation path (e.g., "0'/0/0")
-- `config` (object): Configuration object
+- `config` (object, optional): Configuration object
   - `tonClient` (object | TonClient): TON client configuration or instance
     - `url` (string): TON Center API URL
     - `secretKey` (string, optional): API key for TON Center
-  - `transferMaxFee` (number, optional): Maximum fee amount for transfer operations
+  - `transferMaxFee` (number | bigint, optional): Maximum fee amount for transfer operations (in nanotons)
 
 #### Methods
 
@@ -351,53 +293,13 @@ new WalletAccountTon(seed, path, config)
 | `getAddress()` | Returns the account's TON address | `Promise<string>` |
 | `sign(message)` | Signs a message using the account's private key | `Promise<string>` |
 | `verify(message, signature)` | Verifies a message signature | `Promise<boolean>` |
-| `sendTransaction(tx)` | Sends a TON transaction | `Promise<{hash: string, fee: number}>` |
-| `quoteSendTransaction(tx)` | Estimates the fee for a TON transaction | `Promise<{fee: number}>` |
-| `transfer(options)` | Transfers Jetton tokens to another address | `Promise<{hash: string, fee: number}>` |
-| `quoteTransfer(options)` | Estimates the fee for a Jetton transfer | `Promise<{fee: number}>` |
-| `getBalance()` | Returns the native TON balance (in nanotons) | `Promise<number>` |
-| `getTokenBalance(tokenAddress)` | Returns the balance of a specific Jetton token | `Promise<number>` |
+| `sendTransaction(tx)` | Sends a TON transaction | `Promise<{hash: string, fee: bigint}>` |
+| `quoteSendTransaction(tx)` | Estimates the fee for a TON transaction | `Promise<{fee: bigint}>` |
+| `transfer(options)` | Transfers Jetton tokens to another address | `Promise<{hash: string, fee: bigint}>` |
+| `quoteTransfer(options)` | Estimates the fee for a Jetton transfer | `Promise<{fee: bigint}>` |
+| `getBalance()` | Returns the native TON balance (in nanotons) | `Promise<bigint>` |
+| `getTokenBalance(tokenAddress)` | Returns the balance of a specific Jetton token | `Promise<bigint>` |
 | `dispose()` | Disposes the wallet account, clearing private keys from memory | `void` |
-
-##### `getAddress()`
-Returns the account's address.
-
-**Returns:** `Promise<string>` - The account's TON address
-
-**Example:**
-```javascript
-const address = await account.getAddress()
-console.log('Account address:', address)
-```
-
-##### `sign(message)`
-Signs a message using the account's private key.
-
-**Parameters:**
-- `message` (string): The message to sign
-
-**Returns:** `Promise<string>` - The message signature
-
-**Example:**
-```javascript
-const signature = await account.sign('Hello, World!')
-console.log('Signature:', signature)
-```
-
-##### `verify(message, signature)`
-Verifies a message signature.
-
-**Parameters:**
-- `message` (string): The original message
-- `signature` (string): The signature to verify
-
-**Returns:** `Promise<boolean>` - True if the signature is valid
-
-**Example:**
-```javascript
-const isValid = await account.verify('Hello, World!', signature)
-console.log('Signature valid:', isValid)
-```
 
 ##### `sendTransaction(tx)`
 Sends a TON transaction.
@@ -405,43 +307,10 @@ Sends a TON transaction.
 **Parameters:**
 - `tx` (object): The transaction object
   - `to` (string): Recipient TON address (e.g., 'EQ...')
-  - `value` (number): Amount in nanotons
+  - `value` (number | bigint): Amount in nanotons
   - `bounceable` (boolean, optional): Whether the destination address is bounceable
 
-**Returns:** `Promise<{hash: string, fee: number}>` - Object containing hash and fee (in nanotons)
-
-**Example:**
-```javascript
-const result = await account.sendTransaction({
-  to: 'EQ...', // TON address
-  value: 1000000000, // 1 TON in nanotons
-  bounceable: true
-});
-console.log('Transaction hash:', result.hash);
-console.log('Transaction fee:', result.fee, 'nanotons');
-```
-
-##### `transfer(options)`
-Transfers Jetton tokens to another address.
-
-**Parameters:**
-- `options` (object): Transfer options
-  - `token` (string): Jetton contract address (e.g., 'EQ...')
-  - `recipient` (string): Recipient TON address (e.g., 'EQ...')
-  - `amount` (number): Amount in Jetton's base units
-
-**Returns:** `Promise<{hash: string, fee: number}>` - Object containing hash and fee (in nanotons)
-
-**Example:**
-```javascript
-const result = await account.transfer({
-  token: 'EQ...',      // Jetton contract address
-  recipient: 'EQ...',  // Recipient's TON address
-  amount: 1000000      // Amount in Jetton's base units
-});
-console.log('Transfer hash:', result.hash);
-console.log('Transfer fee:', result.fee, 'nanotons');
-```
+**Returns:** `Promise<{hash: string, fee: bigint}>` - Object containing hash and fee (in nanotons)
 
 #### Properties
 
@@ -465,7 +334,7 @@ new WalletAccountReadOnlyTon(publicKey, config)
 
 **Parameters:**
 - `publicKey` (string | Uint8Array): The account's public key
-- `config` (object): Configuration object
+- `config` (object, optional): Configuration object
   - `tonClient` (object | TonClient): TON client configuration or instance
     - `url` (string): TON Center API URL
     - `secretKey` (string, optional): API key for TON Center
@@ -474,10 +343,10 @@ new WalletAccountReadOnlyTon(publicKey, config)
 
 | Method | Description | Returns |
 |--------|-------------|---------|
-| `getBalance()` | Returns the native TON balance (in nanotons) | `Promise<number>` |
-| `getTokenBalance(tokenAddress)` | Returns the balance of a specific Jetton token | `Promise<number>` |
-| `quoteSendTransaction(tx)` | Estimates the fee for a TON transaction | `Promise<{fee: number}>` |
-| `quoteTransfer(options)` | Estimates the fee for a Jetton transfer | `Promise<{fee: number}>` |
+| `getBalance()` | Returns the native TON balance (in nanotons) | `Promise<bigint>` |
+| `getTokenBalance(tokenAddress)` | Returns the balance of a specific Jetton token | `Promise<bigint>` |
+| `quoteSendTransaction(tx)` | Estimates the fee for a TON transaction | `Promise<{fee: bigint}>` |
+| `quoteTransfer(options)` | Estimates the fee for a Jetton transfer | `Promise<{fee: bigint}>` |
 
 ## 🌐 Supported Networks
 
@@ -489,12 +358,14 @@ This package works with the TON blockchain, including:
 ## 🔒 Security Considerations
 
 - **Seed Phrase Security**: Always store your seed phrase securely and never share it
-- **Private Key Management**: The package handles private keys internally with memory safety features using sodium-universal
-- **Provider Security**: Use trusted TON Center endpoints and consider using your own node for production applications
+- **Private Key Management**: The package handles private keys internally with memory safety features
+- **Provider Security**: Use trusted TON Center endpoints and consider running your own node for production
 - **Transaction Validation**: Always validate transaction details before signing
 - **Memory Cleanup**: Use the `dispose()` method to clear private keys from memory when done
 - **Fee Limits**: Set `transferMaxFee` in config to prevent excessive transaction fees
 - **Address Validation**: Be careful with bounceable vs non-bounceable addresses
+- **Gas Estimation**: Always estimate gas before sending transactions
+- **Contract Interactions**: Verify Jetton contract addresses before transfers
 
 ## 🛠️ Development
 
@@ -537,5 +408,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 For support, please open an issue on the GitHub repository.
 
 ---
-
-**Note**: This package is currently in beta. Please test thoroughly in development environments before using in production.
