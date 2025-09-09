@@ -267,6 +267,67 @@ const wallet = new WalletManagerTon(seedPhrase, {
 | `getFeeRates()` | Returns current fee rates for transactions | `Promise<{normal: bigint, fast: bigint}>` |
 | `dispose()` | Disposes all wallet accounts, clearing private keys from memory | `void` |
 
+##### `getAccount(index)`
+Returns a TON wallet account at the specified index using BIP-44 derivation path m/44'/607'.
+
+**Parameters:**
+- `index` (number, optional): The index of the account to get (default: 0)
+
+**Returns:** `Promise<WalletAccountTon>` - The TON wallet account
+
+**Example:**
+```javascript
+const account = await wallet.getAccount(0)
+const address = await account.getAddress()
+console.log('TON account address:', address)
+```
+
+##### `getAccountByPath(path)`
+Returns a TON wallet account at the specified BIP-44 derivation path.
+
+**Parameters:**
+- `path` (string): The derivation path (e.g., "0'/0/0", "1'/0/5")
+
+**Returns:** `Promise<WalletAccountTon>` - The TON wallet account
+
+**Example:**
+```javascript
+const account = await wallet.getAccountByPath("0'/0/1")
+const address = await account.getAddress()
+console.log('Custom path address:', address)
+```
+
+##### `getFeeRates()`
+Returns current fee rates for TON transactions from the network.
+
+**Returns:** `Promise<{normal: bigint, fast: bigint}>` - Object containing fee rates in nanotons
+- `normal`: Standard fee rate for normal confirmation speed
+- `fast`: Higher fee rate for faster confirmation
+
+**Example:**
+```javascript
+const feeRates = await wallet.getFeeRates()
+console.log('Normal fee rate:', feeRates.normal, 'nanotons')
+console.log('Fast fee rate:', feeRates.fast, 'nanotons')
+
+// Use in transaction
+const result = await account.sendTransaction({
+  to: 'EQBvW8Z5huBkMJYdnfAEM5JqTNkuWX3diqYENkWsIL0XggGG',
+  value: 1000000000n // 1 TON in nanotons
+})
+```
+
+##### `dispose()`
+Disposes all TON wallet accounts and clears sensitive data from memory.
+
+**Returns:** `void`
+
+**Example:**
+```javascript
+wallet.dispose()
+// All accounts and private keys are now securely wiped from memory
+```
+
 ### WalletAccountTon
 
 Represents an individual wallet account. Implements `IWalletAccount` from `@wdk/wallet`.
@@ -301,8 +362,48 @@ new WalletAccountTon(seed, path, config)
 | `getTokenBalance(tokenAddress)` | Returns the balance of a specific Jetton token | `Promise<bigint>` |
 | `dispose()` | Disposes the wallet account, clearing private keys from memory | `void` |
 
+##### `getAddress()`
+Returns the account's TON address.
+
+**Returns:** `Promise<string>` - The TON address
+
+**Example:**
+```javascript
+const address = await account.getAddress()
+console.log('TON address:', address) // EQBvW8Z5...
+```
+
+##### `sign(message)`
+Signs a message using the account's private key.
+
+**Parameters:**
+- `message` (string): Message to sign
+
+**Returns:** `Promise<string>` - Signature as hex string
+
+**Example:**
+```javascript
+const signature = await account.sign('Hello TON!')
+console.log('Signature:', signature)
+```
+
+##### `verify(message, signature)`
+Verifies a message signature using the account's public key.
+
+**Parameters:**
+- `message` (string): Original message
+- `signature` (string): Signature as hex string
+
+**Returns:** `Promise<boolean>` - True if signature is valid
+
+**Example:**
+```javascript
+const isValid = await account.verify('Hello TON!', signature)
+console.log('Signature valid:', isValid)
+```
+
 ##### `sendTransaction(tx)`
-Sends a TON transaction.
+Sends a TON transaction and broadcasts it to the network.
 
 **Parameters:**
 - `tx` (object): The transaction object
@@ -311,6 +412,122 @@ Sends a TON transaction.
   - `bounceable` (boolean, optional): Whether the destination address is bounceable
 
 **Returns:** `Promise<{hash: string, fee: bigint}>` - Object containing hash and fee (in nanotons)
+
+**Example:**
+```javascript
+const result = await account.sendTransaction({
+  to: 'EQBvW8Z5huBkMJYdnfAEM5JqTNkuWX3diqYENkWsIL0XggGG',
+  value: 1000000000n, // 1 TON in nanotons
+  bounceable: true
+})
+console.log('Transaction hash:', result.hash)
+console.log('Fee paid:', result.fee, 'nanotons')
+```
+
+##### `quoteSendTransaction(tx)`
+Estimates the fee for a TON transaction without broadcasting it.
+
+**Parameters:**
+- `tx` (object): Same as sendTransaction parameters
+  - `to` (string): Recipient TON address
+  - `value` (number | bigint): Amount in nanotons
+  - `bounceable` (boolean, optional): Whether the destination address is bounceable
+
+**Returns:** `Promise<{fee: bigint}>` - Object containing estimated fee (in nanotons)
+
+**Example:**
+```javascript
+const quote = await account.quoteSendTransaction({
+  to: 'EQBvW8Z5huBkMJYdnfAEM5JqTNkuWX3diqYENkWsIL0XggGG',
+  value: 1000000000n // 1 TON in nanotons
+})
+console.log('Estimated fee:', quote.fee, 'nanotons')
+console.log('Estimated fee in TON:', Number(quote.fee) / 1e9)
+```
+
+##### `transfer(options)`
+Transfers Jetton tokens to another address and broadcasts the transaction.
+
+**Parameters:**
+- `options` (object): Transfer options
+  - `to` (string): Recipient TON address
+  - `tokenAddress` (string): Jetton master contract address
+  - `value` (number | bigint): Amount in Jetton's smallest unit
+  - `bounceable` (boolean, optional): Whether the destination address is bounceable
+
+**Returns:** `Promise<{hash: string, fee: bigint}>` - Object containing hash and fee (in nanotons)
+
+**Example:**
+```javascript
+const result = await account.transfer({
+  to: 'EQBvW8Z5huBkMJYdnfAEM5JqTNkuWX3diqYENkWsIL0XggGG',
+  tokenAddress: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs', // USDT Jetton
+  value: 1000000n, // 1 USDT (6 decimals)
+  bounceable: true
+})
+console.log('Transfer hash:', result.hash)
+console.log('Gas fee:', result.fee, 'nanotons')
+```
+
+##### `quoteTransfer(options)`
+Estimates the fee for a Jetton token transfer without broadcasting it.
+
+**Parameters:**
+- `options` (object): Same as transfer parameters
+  - `to` (string): Recipient TON address
+  - `tokenAddress` (string): Jetton master contract address
+  - `value` (number | bigint): Amount in Jetton's smallest unit
+  - `bounceable` (boolean, optional): Whether the destination address is bounceable
+
+**Returns:** `Promise<{fee: bigint}>` - Object containing estimated fee (in nanotons)
+
+**Example:**
+```javascript
+const quote = await account.quoteTransfer({
+  to: 'EQBvW8Z5huBkMJYdnfAEM5JqTNkuWX3diqYENkWsIL0XggGG',
+  tokenAddress: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs', // USDT Jetton
+  value: 1000000n // 1 USDT (6 decimals)
+})
+console.log('Estimated transfer fee:', quote.fee, 'nanotons')
+```
+
+##### `getBalance()`
+Returns the account's native TON balance in nanotons.
+
+**Returns:** `Promise<bigint>` - Balance in nanotons
+
+**Example:**
+```javascript
+const balance = await account.getBalance()
+console.log('TON balance:', balance, 'nanotons')
+console.log('Balance in TON:', Number(balance) / 1e9)
+```
+
+##### `getTokenBalance(tokenAddress)`
+Returns the balance of a specific Jetton token.
+
+**Parameters:**
+- `tokenAddress` (string): The Jetton master contract address
+
+**Returns:** `Promise<bigint>` - Token balance in Jetton's smallest unit
+
+**Example:**
+```javascript
+// Get USDT Jetton balance (6 decimals)
+const usdtBalance = await account.getTokenBalance('EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs')
+console.log('USDT balance:', Number(usdtBalance) / 1e6)
+```
+
+##### `dispose()`
+Disposes the wallet account, securely erasing the private key from memory.
+
+**Returns:** `void`
+
+**Example:**
+```javascript
+account.dispose()
+// Private key is now securely wiped from memory
+```
 
 #### Properties
 
@@ -347,6 +564,79 @@ new WalletAccountReadOnlyTon(publicKey, config)
 | `getTokenBalance(tokenAddress)` | Returns the balance of a specific Jetton token | `Promise<bigint>` |
 | `quoteSendTransaction(tx)` | Estimates the fee for a TON transaction | `Promise<{fee: bigint}>` |
 | `quoteTransfer(options)` | Estimates the fee for a Jetton transfer | `Promise<{fee: bigint}>` |
+
+##### `getBalance()`
+Returns the account's native TON balance in nanotons.
+
+**Returns:** `Promise<bigint>` - Balance in nanotons
+
+**Example:**
+```javascript
+const balance = await readOnlyAccount.getBalance()
+console.log('TON balance:', balance, 'nanotons')
+console.log('Balance in TON:', Number(balance) / 1e9)
+```
+
+##### `getTokenBalance(tokenAddress)`
+Returns the balance of a specific Jetton token.
+
+**Parameters:**
+- `tokenAddress` (string): The Jetton master contract address
+
+**Returns:** `Promise<bigint>` - Token balance in Jetton's smallest unit
+
+**Example:**
+```javascript
+// Get USDT Jetton balance (6 decimals)
+const usdtBalance = await readOnlyAccount.getTokenBalance('EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs')
+console.log('USDT balance:', Number(usdtBalance) / 1e6)
+```
+
+##### `quoteSendTransaction(tx)`
+Estimates the fee for a TON transaction without broadcasting it.
+
+**Parameters:**
+- `tx` (object): The transaction object
+  - `to` (string): Recipient TON address (e.g., 'EQ...')
+  - `value` (number | bigint): Amount in nanotons
+  - `bounceable` (boolean, optional): Whether the destination address is bounceable
+
+**Returns:** `Promise<{fee: bigint}>` - Object containing estimated fee (in nanotons)
+
+**Example:**
+```javascript
+const quote = await readOnlyAccount.quoteSendTransaction({
+  to: 'EQBvW8Z5huBkMJYdnfAEM5JqTNkuWX3diqYENkWsIL0XggGG',
+  value: 1000000000n, // 1 TON in nanotons
+  bounceable: true
+})
+console.log('Estimated fee:', quote.fee, 'nanotons')
+console.log('Estimated fee in TON:', Number(quote.fee) / 1e9)
+```
+
+##### `quoteTransfer(options)`
+Estimates the fee for a Jetton token transfer without broadcasting it.
+
+**Parameters:**
+- `options` (object): Transfer options
+  - `to` (string): Recipient TON address
+  - `tokenAddress` (string): Jetton master contract address
+  - `value` (number | bigint): Amount in Jetton's smallest unit
+  - `bounceable` (boolean, optional): Whether the destination address is bounceable
+
+**Returns:** `Promise<{fee: bigint}>` - Object containing estimated fee (in nanotons)
+
+**Example:**
+```javascript
+const quote = await readOnlyAccount.quoteTransfer({
+  to: 'EQBvW8Z5huBkMJYdnfAEM5JqTNkuWX3diqYENkWsIL0XggGG',
+  tokenAddress: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs', // USDT Jetton
+  value: 1000000n, // 1 USDT (6 decimals)
+  bounceable: true
+})
+console.log('Estimated transfer fee:', quote.fee, 'nanotons')
+console.log('Estimated fee in TON:', Number(quote.fee) / 1e9)
+```
 
 ## 🌐 Supported Networks
 
