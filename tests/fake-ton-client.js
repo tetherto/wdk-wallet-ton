@@ -1,12 +1,12 @@
 import { TonClient } from '@ton/ton'
 
-export const UNINITIALIZED_ACCOUNT_FEE = 4_494_400
-
 const UNINITIALIZED_ACCOUNT_SOURCE_FEES = { in_fwd_fee: 3_536_400, storage_fee: 0, gas_fee: 958_000, fwd_fee: 0 }
 
-export const ACTIVE_ACCOUNT_FEE = 3_117_820
+export const UNINITIALIZED_ACCOUNT_FEE = 4_494_400n
 
 const ACTIVE_ACCOUNT_SOURCE_FEES = { in_fwd_fee: 734_400, storage_fee: 7_820, gas_fee: 1_975_600, fwd_fee: 400_000 }
+
+export const ACTIVE_ACCOUNT_FEE = 3_117_820n
 
 export default class FakeTonClient extends TonClient {
   constructor (blockchain) {

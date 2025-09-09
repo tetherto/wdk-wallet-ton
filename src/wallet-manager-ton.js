@@ -40,14 +40,6 @@ export default class WalletManagerTon extends WalletManager {
      * @type {TonWalletConfig}
      */
     this._config = config
-
-    /**
-     * A map between derivation paths and wallet accounts. It contains all the wallet accounts that have been accessed through the {@link getAccount} and {@link getAccountByPath} methods.
-     *
-     * @protected
-     * @type {{ [path: string]: WalletAccountTon }}
-     */
-    this._accounts = {}
   }
 
   /**
@@ -97,19 +89,8 @@ export default class WalletManagerTon extends WalletManager {
     const feeRate = Math.round(gasPrice / 65_536)
 
     return {
-      normal: feeRate,
-      fast: feeRate
+      normal: BigInt(feeRate),
+      fast: BigInt(feeRate)
     }
-  }
-
-  /**
-   * Disposes all the wallet accounts, erasing their private keys from the memory.
-   */
-  dispose () {
-    for (const account of Object.values(this._accounts)) {
-      account.dispose()
-    }
-
-    this._accounts = {}
   }
 }

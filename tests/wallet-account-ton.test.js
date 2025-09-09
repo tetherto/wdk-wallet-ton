@@ -43,8 +43,8 @@ const RECIPIENT = {
 
 const TREASURY_BALANCE = 1_000_000_000_000n
 
-const INITIAL_BALANCE = 1_000_000_000
-const INITIAL_TOKEN_BALANCE = 100_000
+const INITIAL_BALANCE = 1_000_000_000n
+const INITIAL_TOKEN_BALANCE = 100_000n
 
 const DUMMY_UUID_V4 = '1ebd0796-db99-4b45-a0c1-7fd9be0ddfda'
 
@@ -65,11 +65,11 @@ describe('WalletAccountTon', () => {
   let blockchain, treasury, testToken, tonClient, account, recipient
 
   async function sendTonsTo (to, value, options = { }) {
-    await treasury.send({ to: Address.parse(to), value: BigInt(value), init: options.init })
+    await treasury.send({ to: Address.parse(to), value, init: options.init })
   }
 
   async function sendTestTokensTo (to, value) {
-    await testToken.sendMint(treasury.getSender(), Address.parse(to), BigInt(value))
+    await testToken.sendMint(treasury.getSender(), Address.parse(to), value)
   }
 
   beforeEach(async () => {

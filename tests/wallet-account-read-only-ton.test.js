@@ -20,9 +20,9 @@ const ACCOUNT = {
 
 const TREASURY_BALANCE = 1_000_000_000_000n
 
-const INITIAL_BALANCE = 1_000_000_000
-const INITIAL_TOKEN_BALANCE = 100_000
-const ACCOUNT_INITIALIZATION_GAS_COST = 218_400
+const INITIAL_BALANCE = 1_000_000_000n
+const INITIAL_TOKEN_BALANCE = 100_000n
+const ACCOUNT_INITIALIZATION_GAS_COST = 218_400n
 
 async function deployTestToken (blockchain, deployer) {
   const jettonMinter = JettonMinter.createFromConfig({
@@ -41,11 +41,11 @@ describe('WalletAccountReadOnlyTon', () => {
   let blockchain, treasury, testToken, account
 
   async function sendTonsTo (to, value, options = { }) {
-    await treasury.send({ to: Address.parse(to), value: BigInt(value), init: options.init })
+    await treasury.send({ to: Address.parse(to), value, init: options.init })
   }
 
   async function sendTestTokensTo (to, value) {
-    await testToken.sendMint(treasury.getSender(), Address.parse(to), BigInt(value))
+    await testToken.sendMint(treasury.getSender(), Address.parse(to), value)
   }
 
   beforeEach(async () => {
