@@ -12,7 +12,6 @@ For detailed documentation about the complete WDK ecosystem, visit [docs.wallet.
 
 ## 🌟 Features
 
-- **BIP-39 Seed Phrase Support**: Generate and validate BIP-39 mnemonic seed phrases
 - **TON Derivation Paths**: Support for BIP-44 standard derivation paths for TON (m/44'/607')
 - **Multi-Account Management**: Create and manage multiple accounts from a single seed phrase
 - **Transaction Management**: Send transactions and get fee estimates
