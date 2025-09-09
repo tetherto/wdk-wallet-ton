@@ -127,7 +127,7 @@ const balance = await readOnlyAccount.getBalance()
 console.log('Native balance:', balance, 'nanotons')
 
 // Check Jetton token balance using contract
-const jettonBalance = await readOnlyAccount.getTokenBalance('EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs') // Example Jetton contract
+const jettonBalance = await readOnlyAccount.getTokenBalance('EQ...') // Example Jetton contract
 console.log('Jetton balance:', jettonBalance)
 
 // Note: Jetton balance checks use the standard Jetton wallet interface
@@ -141,7 +141,7 @@ Send TON and estimate fees using `WalletAccountTon`. Requires TON Center client 
 ```javascript
 // Send native TON
 const result = await account.sendTransaction({
-  to: 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c', // Example TON address
+  to: 'EQ...', // Example TON address
   value: 1000000000n, // 1 TON in nanotons
   bounceable: true // Optional: specify if the address is bounceable
 })
@@ -150,7 +150,7 @@ console.log('Transaction fee:', result.fee, 'nanotons')
 
 // Get transaction fee estimate
 const quote = await account.quoteSendTransaction({
-  to: 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c',
+  to: 'EQ...',
   value: 1000000000n,
   bounceable: true
 });
@@ -164,8 +164,8 @@ Transfer Jetton tokens and estimate fees using `WalletAccountTon`. Uses standard
 ```javascript
 // Transfer Jetton tokens
 const transferResult = await account.transfer({
-  token: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',      // Jetton contract address
-  recipient: 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c',  // Recipient's TON address
+  token: 'EQ...',      // Jetton contract address
+  recipient: 'EQ...,  // Recipient's TON address
   amount: 1000000000n     // Amount in Jetton's base units (use BigInt for large numbers)
 });
 console.log('Transfer hash:', transferResult.hash);
@@ -173,8 +173,8 @@ console.log('Transfer fee:', transferResult.fee, 'nanotons');
 
 // Quote token transfer fee
 const transferQuote = await account.quoteTransfer({
-  token: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',      // Jetton contract address
-  recipient: 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c',  // Recipient's TON address
+  token: 'EQ...',      // Jetton contract address
+  recipient: 'EQ...',  // Recipient's TON address
   amount: 1000000000n     // Amount in Jetton's base units
 })
 console.log('Transfer fee estimate:', transferQuote.fee, 'nanotons')
