@@ -37,16 +37,16 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
     /**
      * Returns the account's ton balance.
      *
-     * @returns {Promise<number>} The ton balance (in nanotons).
+     * @returns {Promise<bigint>} The ton balance (in nanotons).
      */
-    getBalance(): Promise<number>;
+    getBalance(): Promise<bigint>;
     /**
      * Returns the balance of the account for a specific token.
      *
      * @param {string} tokenAddress - The smart contract address of the token.
-     * @returns {Promise<number>} The token balance (in base unit).
+     * @returns {Promise<bigint>} The token balance (in base unit).
      */
-    getTokenBalance(tokenAddress: string): Promise<number>;
+    getTokenBalance(tokenAddress: string): Promise<bigint>;
     /**
      * Quotes the costs of a send transaction operation.
      *
@@ -105,9 +105,9 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      *
      * @protected
      * @param {Cell} transfer - The transfer.
-     * @returns {Promise<number>} The transfer's fee.
+     * @returns {Promise<bigint>} The transfer's fee.
      */
-    protected _getTransferFee(transfer: Cell): Promise<number>;
+    protected _getTransferFee(transfer: Cell): Promise<bigint>;
     /**
      * Generates and returns a message body with a unique comment.
      *
@@ -130,7 +130,7 @@ export type TonTransaction = {
     /**
      * - The amount of tons to send to the recipient (in nanotons).
      */
-    value: number;
+    value: number | bigint;
     /**
      * - If set, overrides the bounceability of the transaction.
      */
@@ -154,7 +154,7 @@ export type TonWalletConfig = {
     /**
      * - The maximum fee amount for transfer operations.
      */
-    transferMaxFee?: number;
+    transferMaxFee?: number | bigint;
 };
 import { WalletAccountReadOnly } from '@wdk/wallet';
 import { Address, Cell, TonClient, WalletContractV5R1 } from '@ton/ton';

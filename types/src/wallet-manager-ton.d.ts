@@ -14,15 +14,6 @@ export default class WalletManagerTon extends WalletManager {
      */
     protected _config: TonWalletConfig;
     /**
-     * A map between derivation paths and wallet accounts. It contains all the wallet accounts that have been accessed through the {@link getAccount} and {@link getAccountByPath} methods.
-     *
-     * @protected
-     * @type {{ [path: string]: WalletAccountTon }}
-     */
-    protected _accounts: {
-        [path: string]: WalletAccountTon;
-    };
-    /**
      * Returns the wallet account at a specific index (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
      *
      * @example
@@ -48,10 +39,6 @@ export default class WalletManagerTon extends WalletManager {
      * @returns {Promise<FeeRates>} The fee rates (in nanotons).
      */
     getFeeRates(): Promise<FeeRates>;
-    /**
-     * Disposes all the wallet accounts, erasing their private keys from the memory.
-     */
-    dispose(): void;
 }
 export type FeeRates = import("@wdk/wallet").FeeRates;
 export type TonWalletConfig = import("./wallet-account-ton.js").TonWalletConfig;
