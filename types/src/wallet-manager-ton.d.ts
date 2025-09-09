@@ -1,31 +1,18 @@
-/** @typedef {import('./wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
-export default class WalletManagerTon {
-    /**
-     * Returns a random [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
-     *
-     * @returns {string} The seed phrase.
-     */
-    static getRandomSeedPhrase(): string;
-    /**
-     * Checks if a seed phrase is valid.
-     *
-     * @param {string} seedPhrase - The seed phrase.
-     * @returns {boolean} True if the seed phrase is valid.
-     */
-    static isValidSeedPhrase(seedPhrase: string): boolean;
+export default class WalletManagerTon extends WalletManager {
     /**
      * Creates a new wallet manager for the ton blockchain.
      *
-     * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+     * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
      * @param {TonWalletConfig} [config] - The configuration object.
      */
-    constructor(seedPhrase: string, config?: TonWalletConfig);
+    constructor(seed: string | Uint8Array, config?: TonWalletConfig);
     /**
-    * The seed phrase of the wallet.
-    *
-    * @type {string}
-    */
-    get seedPhrase(): string;
+     * The ton wallet configuration.
+     *
+     * @protected
+     * @type {TonWalletConfig}
+     */
+    protected _config: TonWalletConfig;
     /**
      * Returns the wallet account at a specific index (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
      *
@@ -39,6 +26,9 @@ export default class WalletManagerTon {
     /**
      * Returns the wallet account at a specific BIP-44 derivation path.
      *
+     * @example
+     * // Returns the account with derivation path m/44'/607'/0'/0/1
+     * const account = await wallet.getAccountByPath("0'/0/1");
      * @param {string} path - The derivation path (e.g. "0'/0/0").
      * @returns {Promise<WalletAccountTon>} The account.
      */
@@ -46,13 +36,11 @@ export default class WalletManagerTon {
     /**
      * Returns the current fee rates.
      *
-     * @returns {Promise<{ normal: number, fast: number }>} The fee rates (in nanotons).
+     * @returns {Promise<FeeRates>} The fee rates (in nanotons).
      */
-    getFeeRates(): Promise<{
-        normal: number;
-        fast: number;
-    }>;
-    #private;
+    getFeeRates(): Promise<FeeRates>;
 }
+export type FeeRates = import("@wdk/wallet").FeeRates;
 export type TonWalletConfig = import("./wallet-account-ton.js").TonWalletConfig;
+import WalletManager from '@wdk/wallet';
 import WalletAccountTon from './wallet-account-ton.js';

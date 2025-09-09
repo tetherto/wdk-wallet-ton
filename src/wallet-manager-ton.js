@@ -13,68 +13,33 @@
 // limitations under the License.
 'use strict'
 
-import { TonApiClient } from '@ton-api/client'
-import * as bip39 from 'bip39'
+import WalletManager from '@wdk/wallet'
+
 import WalletAccountTon from './wallet-account-ton.js'
+
+/** @typedef {import('@wdk/wallet').FeeRates} FeeRates */
 
 /** @typedef {import('./wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
 
-export default class WalletManagerTon {
-  #seedPhrase
-  #config
-  #client
+const TON_API_URL = 'https://tonapi.io/v2'
 
+export default class WalletManagerTon extends WalletManager {
   /**
    * Creates a new wallet manager for the ton blockchain.
    *
-   * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+   * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
    * @param {TonWalletConfig} [config] - The configuration object.
    */
-  constructor (seedPhrase, config = {}) {
-    if (!WalletManagerTon.isValidSeedPhrase(seedPhrase)) {
-      throw new Error('The seed phrase is invalid.')
-    }
+  constructor (seed, config = {}) {
+    super(seed, config)
 
-    this.#seedPhrase = seedPhrase
-
-    this.#config = config
-
-    const { tonApiUrl, tonApiSecretKey } = config
-
-    if (tonApiUrl && tonApiSecretKey) {
-      this.#client = new TonApiClient({
-        baseUrl: tonApiUrl,
-        apiKey: tonApiSecretKey
-      })
-    }
-  }
-
-  /**
-   * Returns a random [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
-   *
-   * @returns {string} The seed phrase.
-   */
-  static getRandomSeedPhrase () {
-    return bip39.generateMnemonic()
-  }
-
-  /**
-   * Checks if a seed phrase is valid.
-   *
-   * @param {string} seedPhrase - The seed phrase.
-   * @returns {boolean} True if the seed phrase is valid.
-   */
-  static isValidSeedPhrase (seedPhrase) {
-    return bip39.validateMnemonic(seedPhrase)
-  }
-
-  /**
-  * The seed phrase of the wallet.
-  *
-  * @type {string}
-  */
-  get seedPhrase () {
-    return this.#seedPhrase
+    /**
+     * The ton wallet configuration.
+     *
+     * @protected
+     * @type {TonWalletConfig}
+     */
+    this._config = config
   }
 
   /**
@@ -93,30 +58,39 @@ export default class WalletManagerTon {
   /**
    * Returns the wallet account at a specific BIP-44 derivation path.
    *
+   * @example
+   * // Returns the account with derivation path m/44'/607'/0'/0/1
+   * const account = await wallet.getAccountByPath("0'/0/1");
    * @param {string} path - The derivation path (e.g. "0'/0/0").
    * @returns {Promise<WalletAccountTon>} The account.
    */
   async getAccountByPath (path) {
-    return new WalletAccountTon(this.#seedPhrase, path, this.#config)
+    if (!this._accounts[path]) {
+      const account = new WalletAccountTon(this.seed, path, this._config)
+
+      this._accounts[path] = account
+    }
+
+    return this._accounts[path]
   }
 
   /**
    * Returns the current fee rates.
    *
-   * @returns {Promise<{ normal: number, fast: number }>} The fee rates (in nanotons).
+   * @returns {Promise<FeeRates>} The fee rates (in nanotons).
    */
   async getFeeRates () {
-    if (!this.#client) {
-      throw new Error('The wallet must be connected to the ton api to fetch fee rates.')
-    }
+    /* eslint-disable camelcase */
 
-    const { config: { config_param21 } } = await this.#client.blockchain.getRawBlockchainConfig()
-    const gasPriceBasechainRaw = config_param21.gas_limits_prices.gas_flat_pfx.other.gas_prices_ext.gas_price
-    const gasPriceBasechain = Math.round(gasPriceBasechainRaw / 65536)
+    const response = await fetch(`${TON_API_URL}/blockchain/config/raw`)
+
+    const { config: { config_param21 } } = await response.json()
+    const gasPrice = config_param21.gas_limits_prices.gas_flat_pfx.other.gas_prices_ext.gas_price
+    const feeRate = Math.round(gasPrice / 65_536)
 
     return {
-      normal: gasPriceBasechain,
-      fast: gasPriceBasechain
+      normal: BigInt(feeRate),
+      fast: BigInt(feeRate)
     }
   }
 }
