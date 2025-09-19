@@ -23,7 +23,7 @@
     "@ton/crypto": "3.3.0",
     "@ton/ton": "15.2.1",
     "@wdk/wallet": "https://github.com/davi0kprogramsthings/wdk-wallet#develop",
-    "bare-wdk-runtime": "2.0.0",
+    "bare-node-runtime": "1.0.3",
     "bip39": "3.1.0",
     "micro-key-producer": "0.7.6",
     "sodium-universal": "5.0.1",
