@@ -1,4 +1,4 @@
-# @wdk/wallet-ton
+# @tetherto/wdk-wallet-ton
 
 **Note**: This package is currently in beta. Please test thoroughly in development environments before using in production.
 
@@ -20,22 +20,22 @@ For detailed documentation about the complete WDK ecosystem, visit [docs.wallet.
 
 ## ⬇️ Installation
 
-To install the `@wdk/wallet-ton` package, follow these instructions:
+To install the `@tetherto/wdk-wallet-ton` package, follow these instructions:
 
 You can install it using npm:
 
 ```bash
-npm install @wdk/wallet-ton
+npm install @tetherto/wdk-wallet-ton
 ```
 
 ## 🚀 Quick Start
 
-### Importing from `@wdk/wallet-ton`
+### Importing from `@tetherto/wdk-wallet-ton`
 
 ### Creating a New Wallet
 
 ```javascript
-import WalletManagerTon, { WalletAccountTon, WalletAccountReadOnlyTon } from '@wdk/wallet-ton'
+import WalletManagerTon, { WalletAccountTon, WalletAccountReadOnlyTon } from '@tetherto/wdk-wallet-ton'
 
 // Use a BIP-39 seed phrase (replace with your own secure phrase)
 const seedPhrase = 'test only example nut use this real life secret phrase must random'
@@ -59,7 +59,7 @@ const readOnlyAccount = await account.toReadOnlyAccount()
 ### Managing Multiple Accounts
 
 ```javascript
-import WalletManagerTon from '@wdk/wallet-ton'
+import WalletManagerTon from '@tetherto/wdk-wallet-ton'
 
 // Assume wallet is already created
 // Get the first account (index 0)
@@ -89,7 +89,7 @@ console.log('Custom account address:', customAddress)
 For accounts where you have the seed phrase and full access:
 
 ```javascript
-import WalletManagerTon from '@wdk/wallet-ton'
+import WalletManagerTon from '@tetherto/wdk-wallet-ton'
 
 // Assume wallet and account are already created
 // Get native TON balance (in nanotons)
@@ -110,7 +110,7 @@ console.log('Jetton balance:', jettonBalance);
 For addresses where you don't have the seed phrase:
 
 ```javascript
-import { WalletAccountReadOnlyTon } from '@wdk/wallet-ton'
+import { WalletAccountReadOnlyTon } from '@tetherto/wdk-wallet-ton'
 
 // Create a read-only account with public key
 const publicKey = '...'; // Replace with the actual public key
@@ -223,14 +223,14 @@ wallet.dispose()
 
 | Class | Description | Methods |
 |-------|-------------|---------|
-| [WalletManagerTon](#walletmanagerton) | Main class for managing TON wallets. Extends `WalletManager` from `@wdk/wallet`. | [Constructor](#constructor), [Methods](#methods) |
-| [WalletAccountTon](#walletaccountton) | Individual TON wallet account implementation. Extends `WalletAccountReadOnlyTon` and implements `IWalletAccount` from `@wdk/wallet`. | [Constructor](#constructor-1), [Methods](#methods-1), [Properties](#properties) |
-| [WalletAccountReadOnlyTon](#walletaccountreadonlyton) | Read-only TON wallet account. Extends `WalletAccountReadOnly` from `@wdk/wallet`. | [Constructor](#constructor-2), [Methods](#methods-2) |
+| [WalletManagerTon](#walletmanagerton) | Main class for managing TON wallets. Extends `WalletManager` from `@tetherto/wdk-wallet`. | [Constructor](#constructor), [Methods](#methods) |
+| [WalletAccountTon](#walletaccountton) | Individual TON wallet account implementation. Extends `WalletAccountReadOnlyTon` and implements `IWalletAccount` from `@tetherto/wdk-wallet`. | [Constructor](#constructor-1), [Methods](#methods-1), [Properties](#properties) |
+| [WalletAccountReadOnlyTon](#walletaccountreadonlyton) | Read-only TON wallet account. Extends `WalletAccountReadOnly` from `@tetherto/wdk-wallet`. | [Constructor](#constructor-2), [Methods](#methods-2) |
 
 ### WalletManagerTon
 
 The main class for managing TON wallets.  
-Extends `WalletManager` from `@wdk/wallet`.
+Extends `WalletManager` from `@tetherto/wdk-wallet`.
 
 #### Constructor
 
@@ -329,7 +329,7 @@ wallet.dispose()
 
 ### WalletAccountTon
 
-Represents an individual wallet account. Implements `IWalletAccount` from `@wdk/wallet`.
+Represents an individual wallet account. Implements `IWalletAccount` from `@tetherto/wdk-wallet`.
 
 #### Constructor
 
