@@ -13,7 +13,7 @@
 // limitations under the License.
 'use strict'
 
-import { WalletAccountReadOnly } from '@wdk/wallet'
+import { WalletAccountReadOnly } from '@tetherto/wdk-wallet'
 
 import { Address, beginCell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
 
@@ -24,9 +24,9 @@ import { v4 as uuidv4 } from 'uuid'
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
 /** @typedef {import('@ton/ton').Transaction} TonTransactionReceipt */
 
-/** @typedef {import('@wdk/wallet').TransactionResult} TransactionResult */
-/** @typedef {import('@wdk/wallet').TransferOptions} TransferOptions */
-/** @typedef {import('@wdk/wallet').TransferResult} TransferResult */
+/** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
+/** @typedef {import('@tetherto/wdk-wallet').TransferOptions} TransferOptions */
+/** @typedef {import('@tetherto/wdk-wallet').TransferResult} TransferResult */
 
 /**
  * @typedef {Object} TonTransaction
