@@ -40,7 +40,7 @@ export default class WalletManagerTon extends WalletManager {
      */
     getFeeRates(): Promise<FeeRates>;
 }
-export type FeeRates = import("@wdk/wallet").FeeRates;
+export type FeeRates = import("@tetherto/wdk-wallet").FeeRates;
 export type TonWalletConfig = import("./wallet-account-ton.js").TonWalletConfig;
-import WalletManager from '@wdk/wallet';
+import WalletManager from '@tetherto/wdk-wallet';
 import WalletAccountTon from './wallet-account-ton.js';

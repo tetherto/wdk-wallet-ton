@@ -119,9 +119,9 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
 export type OpenedContract<F> = import("@ton/ton").OpenedContract<F>;
 export type MessageRelaxed = import("@ton/ton").MessageRelaxed;
 export type TonTransactionReceipt = import("@ton/ton").Transaction;
-export type TransactionResult = import("@wdk/wallet").TransactionResult;
-export type TransferOptions = import("@wdk/wallet").TransferOptions;
-export type TransferResult = import("@wdk/wallet").TransferResult;
+export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
+export type TransferOptions = import("@tetherto/wdk-wallet").TransferOptions;
+export type TransferResult = import("@tetherto/wdk-wallet").TransferResult;
 export type TonTransaction = {
     /**
      * - The transaction's recipient.
@@ -156,5 +156,5 @@ export type TonWalletConfig = {
      */
     transferMaxFee?: number | bigint;
 };
-import { WalletAccountReadOnly } from '@wdk/wallet';
+import { WalletAccountReadOnly } from '@tetherto/wdk-wallet';
 import { Address, Cell, TonClient, WalletContractV5R1 } from '@ton/ton';
