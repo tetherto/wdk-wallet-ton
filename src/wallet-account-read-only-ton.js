@@ -214,11 +214,18 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
 
     const receipt = transactions[0]
 
-    const [transaction] = await this._tonClient.getTransactions(address, {
-      hash: receipt.hash
-    })
-
-    return transaction
+    try {
+      const [transaction] = await this._tonClient.getTransactions(address, {
+        hash: receipt.hash
+      })
+      return transaction
+    } catch (error) {
+      const [transaction] = await this._tonClient.getTransactions(address, {
+        hash: receipt.hash,
+        archival: true
+      })
+      return transaction
+    }
   }
 
   /**
