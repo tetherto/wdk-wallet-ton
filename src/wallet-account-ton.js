@@ -15,7 +15,7 @@
 
 import { sign, signVerify } from '@ton/crypto'
 
-import { beginCell, SendMode } from '@ton/ton'
+import { SendMode } from '@ton/ton'
 
 import nacl from 'tweetnacl'
 import HDKey from 'micro-key-producer/slip10.js'

@@ -17,8 +17,6 @@ import { WalletAccountReadOnly } from '@tetherto/wdk-wallet'
 
 import { Address, beginCell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
 
-import { v4 as uuidv4 } from 'uuid'
-
 /** @typedef {import('@ton/ton').Cell} Cell */
 /** @typedef {import('@ton/ton').OpenedContract} OpenedContract */
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
