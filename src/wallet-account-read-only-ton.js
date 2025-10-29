@@ -360,8 +360,6 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    * @returns {bigint} The random queryId.
    */
   _generateQueryId () {
-    // Generate random 64-bit unsigned integer
-    // Split into two 32-bit parts for full 64-bit range
     const high = BigInt(Math.floor(Math.random() * 0x100000000))
     const low = BigInt(Math.floor(Math.random() * 0x100000000))
     const queryId = (high << 32n) | low
