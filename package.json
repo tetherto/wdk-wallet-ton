@@ -31,7 +31,8 @@
     "bare-node-runtime": "1.0.3",
     "bip39": "3.1.0",
     "micro-key-producer": "0.7.6",
-    "sodium-universal": "5.0.1"
+    "sodium-universal": "5.0.1",
+    "tweetnacl": "1.0.3"
   },
   "devDependencies": {
     "@ton-community/assets-sdk": "0.0.5",

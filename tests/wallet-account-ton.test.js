@@ -217,14 +217,10 @@ describe('WalletAccountTon', () => {
       expect(result2.hash).toBeDefined()
       expect(result3.hash).toBeDefined()
 
-      // Each transaction has unique hash because we hash the external transfer
-      // Transfer includes seqno which increments: seqno=0, seqno=1, seqno=2
-      // Even with identical message bodies, transfer hashes are different
       expect(result1.hash).not.toBe(result2.hash)
       expect(result2.hash).not.toBe(result3.hash)
       expect(result1.hash).not.toBe(result3.hash)
 
-      // All three transactions should be in the blockchain
       const tonTransfers = blockchain.transactions.filter(tx => {
         if (!tx.inMessage?.info) return false
         const info = tx.inMessage.info
@@ -257,7 +253,6 @@ describe('WalletAccountTon', () => {
       const expectedHash = transfer.hash().toString('hex')
       expect(returnedHash).toBe(expectedHash)
 
-      // The transfer hash should NOT be the same as just the message body hash
       const messageBodyHash = message.body.hash().toString('hex')
       expect(returnedHash).not.toBe(messageBodyHash)
     })
@@ -334,7 +329,6 @@ describe('WalletAccountTon', () => {
       expect(result2.hash).not.toBe(result3.hash)
       expect(result1.hash).not.toBe(result3.hash)
 
-      // Verify all three transfers were successful
       const accountJettonWalletAddress = await testToken.getWalletAddress(account._wallet.address)
 
       const jettonTransfers = blockchain.transactions.filter(tx => {
