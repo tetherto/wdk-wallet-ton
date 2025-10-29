@@ -233,7 +233,7 @@ describe('WalletAccountTon', () => {
                info.dest?.equals(recipient._wallet.address)
       })
 
-      expect(tonTransfers.length).toBeGreaterThanOrEqual(3)
+      expect(tonTransfers.length).toBe(3)
     })
 
     test('should return the hash of the external transfer cell (not just message body)', async () => {
@@ -345,7 +345,7 @@ describe('WalletAccountTon', () => {
                info.dest?.equals(accountJettonWalletAddress)
       })
 
-      expect(jettonTransfers.length).toBeGreaterThanOrEqual(3)
+      expect(jettonTransfers.length).toBe(3)
     })
 
     test('should throw if transfer fee exceeds the transfer max fee configuration', async () => {
