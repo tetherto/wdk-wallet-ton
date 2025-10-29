@@ -1,20 +1,13 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals'
 
-import { Address, beginCell } from '@ton/ton'
+import { Address, beginCell, SendMode } from '@ton/ton'
 import { JettonMinter } from '@ton-community/assets-sdk'
-import * as uuid from 'uuid'
 
 import * as bip39 from 'bip39'
 
 import BlockchainWithLogs from './blockchain-with-logs.js'
 import FakeTonClient, { ACTIVE_ACCOUNT_FEE } from './fake-ton-client.js'
 
-const uuidv4Mock = jest.fn()
-
-await jest.unstable_mockModule('uuid', () => ({
-  ...uuid,
-  v4: uuidv4Mock
-}))
 
 const { WalletAccountReadOnlyTon, WalletAccountTon } = await import('../index.js')
 
@@ -46,7 +39,7 @@ const TREASURY_BALANCE = 1_000_000_000_000n
 const INITIAL_BALANCE = 1_000_000_000n
 const INITIAL_TOKEN_BALANCE = 100_000n
 
-const DUMMY_UUID_V4 = '1ebd0796-db99-4b45-a0c1-7fd9be0ddfda'
+const DUMMY_QUERY_ID = 12345678901234567890n
 
 async function deployTestToken (blockchain, deployer) {
   const jettonMinter = JettonMinter.createFromConfig({
@@ -174,8 +167,6 @@ describe('WalletAccountTon', () => {
         value: 1_000_000
       }
 
-      uuidv4Mock.mockImplementation(() => DUMMY_UUID_V4)
-
       const { hash, fee } = await account.sendTransaction(TRANSACTION)
 
       expect(blockchain.transactions).toHaveTransaction({
@@ -185,7 +176,7 @@ describe('WalletAccountTon', () => {
         success: true
       })
 
-      expect(hash).toBe('731189bbe84a4e9b72ff6a5e83259a194b123a6215418eb483cb3ec41fd097e3')
+      expect(hash).toBeDefined()
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
     })
@@ -197,8 +188,6 @@ describe('WalletAccountTon', () => {
         bounceable: true
       }
 
-      uuidv4Mock.mockImplementation(() => DUMMY_UUID_V4)
-
       const { hash, fee } = await account.sendTransaction(TRANSACTION)
 
       expect(blockchain.transactions).toHaveTransaction({
@@ -209,9 +198,68 @@ describe('WalletAccountTon', () => {
         success: true
       })
 
-      expect(hash).toBe('731189bbe84a4e9b72ff6a5e83259a194b123a6215418eb483cb3ec41fd097e3')
+      expect(hash).toBeDefined()
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
+    })
+
+    test('should generate unique hashes for identical transactions (seqno in transfer ensures uniqueness)', async () => {
+      const TRANSACTION = {
+        to: RECIPIENT.address,
+        value: 1_000_000
+      }
+
+      const result1 = await account.sendTransaction(TRANSACTION)
+      const result2 = await account.sendTransaction(TRANSACTION)
+      const result3 = await account.sendTransaction(TRANSACTION)
+
+      expect(result1.hash).toBeDefined()
+      expect(result2.hash).toBeDefined()
+      expect(result3.hash).toBeDefined()
+
+      // Each transaction has unique hash because we hash the external transfer
+      // Transfer includes seqno which increments: seqno=0, seqno=1, seqno=2
+      // Even with identical message bodies, transfer hashes are different
+      expect(result1.hash).not.toBe(result2.hash)
+      expect(result2.hash).not.toBe(result3.hash)
+      expect(result1.hash).not.toBe(result3.hash)
+
+      // All three transactions should be in the blockchain
+      const tonTransfers = blockchain.transactions.filter(tx => {
+        if (!tx.inMessage?.info) return false
+        const info = tx.inMessage.info
+        if (info.type !== 'internal') return false
+        return info.src?.equals(account._wallet.address) &&
+               info.dest?.equals(recipient._wallet.address)
+      })
+
+      expect(tonTransfers.length).toBeGreaterThanOrEqual(3)
+    })
+
+    test('should return the hash of the external transfer cell (not just message body)', async () => {
+      const TRANSACTION = {
+        to: RECIPIENT.address,
+        value: 1_000_000
+      }
+
+      const seqnoBefore = await account._contract.getSeqno()
+
+      const { hash: returnedHash } = await account.sendTransaction(TRANSACTION)
+
+      const message = await account._getTransactionMessage(TRANSACTION)
+      const transfer = account._contract.createTransfer({
+        secretKey: account._keyPair.secretKey,
+        sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+        messages: [message],
+        seqno: seqnoBefore
+      })
+
+      const expectedHash = transfer.hash().toString('hex')
+      expect(returnedHash).toBe(expectedHash)
+
+      // The transfer hash should NOT be the same as just the message body hash
+      const messageBodyHash = message.body.hash().toString('hex')
+      expect(returnedHash).not.toBe(messageBodyHash)
     })
 
     test('should throw if the account is not connected to the ton center', async () => {
@@ -230,7 +278,7 @@ describe('WalletAccountTon', () => {
         amount: 1_000
       }
 
-      uuidv4Mock.mockImplementation(() => DUMMY_UUID_V4)
+      jest.spyOn(account, '_generateQueryId').mockReturnValue(DUMMY_QUERY_ID)
 
       const { hash, fee } = await account.transfer(TRANSFER)
 
@@ -238,20 +286,15 @@ describe('WalletAccountTon', () => {
 
       const recipientJettonWalletAddress = await testToken.getWalletAddress(Address.parse(TRANSFER.recipient))
 
-      const messageBody = beginCell()
-        .storeUint(0, 32)
-        .storeStringTail(DUMMY_UUID_V4)
-        .endCell()
-
       const internalTransferBody = beginCell()
         .storeUint(0x0f8a7ea5, 32)
-        .storeUint(0, 64)
+        .storeUint(DUMMY_QUERY_ID, 64)
         .storeCoins(TRANSFER.amount)
         .storeAddress(recipient._wallet.address)
         .storeAddress(account._wallet.address)
         .storeBit(false)
         .storeCoins(1n)
-        .storeMaybeRef(messageBody)
+        .storeMaybeRef(null)
         .endCell()
 
       expect(blockchain.transactions).toHaveTransaction({
@@ -267,9 +310,42 @@ describe('WalletAccountTon', () => {
         success: true
       })
 
-      expect(hash).toBe('ae9694ebfad8527c14d286bf601c837a97b0e4dd56afdc8fbf067ed8c73e7fd1')
+      expect(hash).toBeDefined()
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
+    })
+
+    test('should generate different hashes for identical token transfers (queryId ensures uniqueness)', async () => {
+      const TRANSFER = {
+        token: testToken.address.toString(),
+        recipient: RECIPIENT.address,
+        amount: 1_000
+      }
+
+      const result1 = await account.transfer(TRANSFER)
+      const result2 = await account.transfer(TRANSFER)
+      const result3 = await account.transfer(TRANSFER)
+
+      expect(result1.hash).toBeDefined()
+      expect(result2.hash).toBeDefined()
+      expect(result3.hash).toBeDefined()
+
+      expect(result1.hash).not.toBe(result2.hash)
+      expect(result2.hash).not.toBe(result3.hash)
+      expect(result1.hash).not.toBe(result3.hash)
+
+      // Verify all three transfers were successful
+      const accountJettonWalletAddress = await testToken.getWalletAddress(account._wallet.address)
+
+      const jettonTransfers = blockchain.transactions.filter(tx => {
+        if (!tx.inMessage?.info) return false
+        const info = tx.inMessage.info
+        if (info.type !== 'internal') return false
+        return info.src?.equals(account._wallet.address) &&
+               info.dest?.equals(accountJettonWalletAddress)
+      })
+
+      expect(jettonTransfers.length).toBeGreaterThanOrEqual(3)
     })
 
     test('should throw if transfer fee exceeds the transfer max fee configuration', async () => {

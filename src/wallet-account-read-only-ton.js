@@ -33,6 +33,7 @@ import { v4 as uuidv4 } from 'uuid'
  * @property {string} to - The transaction's recipient.
  * @property {number | bigint} value - The amount of tons to send to the recipient (in nanotons).
  * @property {boolean} [bounceable] - If set, overrides the bounceability of the transaction.
+ * @property {string | Cell} [body] - Optional message body for smart contract interactions.
  */
 
 /**
@@ -257,14 +258,14 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    * @param {TonTransaction} tx - The transaction.
    * @returns {Promise<MessageRelaxed>} The internal message.
    */
-  async _getTransactionMessage ({ to, value, bounceable }) {
+  async _getTransactionMessage ({ to, value, bounceable, body }) {
     const { isBounceable } = Address.parseFriendly(to)
 
     const message = internal({
       to,
       value: fromNano(value),
       bounce: bounceable ?? isBounceable,
-      body: this._generateUniqueMessageBody()
+      body: body || ''
     })
 
     return message
@@ -282,19 +283,19 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
 
     const address = this._wallet.address
 
-    const messageBody = this._generateUniqueMessageBody()
+    const queryId = this._generateQueryId()
 
     const jettonWalletAddress = await this._getJettonWalletAddress(token)
 
     const body = beginCell()
       .storeUint(0x0f8a7ea5, 32)
-      .storeUint(0, 64)
+      .storeUint(queryId, 64)
       .storeCoins(amount)
       .storeAddress(recipient)
       .storeAddress(address)
       .storeBit(false)
       .storeCoins(1n)
-      .storeMaybeRef(messageBody)
+      .storeMaybeRef(null)
       .endCell()
 
     const message = internal({
@@ -355,17 +356,18 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
   }
 
   /**
-   * Generates and returns a message body with a unique comment.
+   * Generates and returns a random 64-bit unsigned integer for use as a queryId.
    *
    * @protected
-   * @returns {Promise<Cell>} The unique message body.
+   * @returns {bigint} The random queryId.
    */
-  _generateUniqueMessageBody () {
-    const messageBody = beginCell()
-      .storeUint(0, 32)
-      .storeStringTail(uuidv4())
-      .endCell()
+  _generateQueryId () {
+    // Generate random 64-bit unsigned integer
+    // Split into two 32-bit parts for full 64-bit range
+    const high = BigInt(Math.floor(Math.random() * 0x100000000))
+    const low = BigInt(Math.floor(Math.random() * 0x100000000))
+    const queryId = (high << 32n) | low
 
-    return messageBody
+    return queryId
   }
 }

@@ -166,7 +166,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
     await this._contract.send(transfer)
 
     return {
-      hash: this._getMessageHash(message),
+      hash: transfer.hash().toString('hex'),
       fee
     }
   }
@@ -195,7 +195,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
     await this._contract.send(transfer)
 
     return {
-      hash: this._getMessageHash(message),
+      hash: transfer.hash().toString('hex'),
       fee
     }
   }
@@ -218,35 +218,6 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
     sodium_memzero(this._keyPair.secretKey)
 
     this._keyPair.secretKey = undefined
-  }
-
-  /**
-   * Hashes a message and returns the result.
-   *
-   * @protected
-   * @param {MessageRelaxed} message - The message.
-   * @returns {string} The message's hash.
-   */
-  _getMessageHash (message) {
-    if (message.info.type === 'internal') {
-      const hash = message.body.hash()
-
-      return hash.toString('hex')
-    }
-
-    const cell = beginCell()
-      .storeUint(2, 2)
-      .storeUint(0, 2)
-      .storeAddress(message.info.dest)
-      .storeUint(0, 4)
-      .storeBit(false)
-      .storeBit(true)
-      .storeRef(message.body)
-      .endCell()
-
-    const hash = cell.hash()
-
-    return hash.toString('hex')
   }
 
   async _getTransfer (message) {
