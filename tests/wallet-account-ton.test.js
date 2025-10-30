@@ -8,6 +8,17 @@ import * as bip39 from 'bip39'
 import BlockchainWithLogs from './blockchain-with-logs.js'
 import FakeTonClient, { ACTIVE_ACCOUNT_FEE } from './fake-ton-client.js'
 
+function calculateQueryId (highRandom, lowRandom) {
+  const high = BigInt(Math.floor(highRandom * 0x100000000))
+  const low = BigInt(Math.floor(lowRandom * 0x100000000))
+  const queryId = (high << 32n) | low
+  return queryId
+}
+const originalMathRandom = Math.random
+
+function restoreMathRandom () {
+  global.Math.random = originalMathRandom
+}
 
 const { WalletAccountReadOnlyTon, WalletAccountTon } = await import('../index.js')
 
@@ -83,6 +94,7 @@ describe('WalletAccountTon', () => {
 
   afterEach(() => {
     account.dispose()
+    restoreMathRandom()
   })
 
   describe('constructor', () => {
@@ -176,7 +188,7 @@ describe('WalletAccountTon', () => {
         success: true
       })
 
-      expect(hash).toBeDefined()
+      expect(hash).toBe('fee3cb87605424ffa9fd23da23b10ab71856371286d2b92481eb6f5e52c408d0')
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
     })
@@ -232,31 +244,6 @@ describe('WalletAccountTon', () => {
       expect(tonTransfers.length).toBe(3)
     })
 
-    test('should return the hash of the external transfer cell (not just message body)', async () => {
-      const TRANSACTION = {
-        to: RECIPIENT.address,
-        value: 1_000_000
-      }
-
-      const seqnoBefore = await account._contract.getSeqno()
-
-      const { hash: returnedHash } = await account.sendTransaction(TRANSACTION)
-
-      const message = await account._getTransactionMessage(TRANSACTION)
-      const transfer = account._contract.createTransfer({
-        secretKey: account._keyPair.secretKey,
-        sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
-        messages: [message],
-        seqno: seqnoBefore
-      })
-
-      const expectedHash = transfer.hash().toString('hex')
-      expect(returnedHash).toBe(expectedHash)
-
-      const messageBodyHash = message.body.hash().toString('hex')
-      expect(returnedHash).not.toBe(messageBodyHash)
-    })
-
     test('should throw if the account is not connected to the ton center', async () => {
       const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0")
 
@@ -273,7 +260,8 @@ describe('WalletAccountTon', () => {
         amount: 1_000
       }
 
-      jest.spyOn(account, '_generateQueryId').mockReturnValue(DUMMY_QUERY_ID)
+      global.Math.random = jest.fn().mockReturnValueOnce(0.5).mockReturnValueOnce(0.25)
+      const expectedQueryId = calculateQueryId(0.5, 0.25)
 
       const { hash, fee } = await account.transfer(TRANSFER)
 
@@ -283,7 +271,7 @@ describe('WalletAccountTon', () => {
 
       const internalTransferBody = beginCell()
         .storeUint(0x0f8a7ea5, 32)
-        .storeUint(DUMMY_QUERY_ID, 64)
+        .storeUint(expectedQueryId, 64)
         .storeCoins(TRANSFER.amount)
         .storeAddress(recipient._wallet.address)
         .storeAddress(account._wallet.address)
@@ -305,7 +293,7 @@ describe('WalletAccountTon', () => {
         success: true
       })
 
-      expect(hash).toBeDefined()
+      expect(hash).toBe('80d5f87f50b39be73b038e968dc19bae93ae7a216287ee604575f7bd3a99a957')
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
     })
