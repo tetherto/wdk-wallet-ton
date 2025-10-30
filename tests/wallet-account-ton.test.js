@@ -15,9 +15,18 @@ function calculateQueryId (highRandom, lowRandom) {
   return queryId
 }
 const originalMathRandom = Math.random
-
 function restoreMathRandom () {
   global.Math.random = originalMathRandom
+}
+
+// The timeout field in TON external messages depends on seqno:
+// - seqno=0: timeout = 0xFFFFFFFF (all 1s) - always deterministic
+// - seqno>0: timeout = Math.floor(Date.now() / 1000) + 60 - uses current time
+// Since hash = SHA256(opCode + walletId + timeout + seqno + actions + signature),
+// we need to mock Date.now() to get reproducible hashes for seqno > 0
+const originalDateNow = Date.now
+function restoreDateNow () {
+  global.Date.now = originalDateNow
 }
 
 const { WalletAccountReadOnlyTon, WalletAccountTon } = await import('../index.js')
@@ -50,9 +59,7 @@ const TREASURY_BALANCE = 1_000_000_000_000n
 const INITIAL_BALANCE = 1_000_000_000n
 const INITIAL_TOKEN_BALANCE = 100_000n
 
-const DUMMY_QUERY_ID = 12345678901234567890n
-
-async function deployTestToken (blockchain, deployer) {
+async function deployTestToken(blockchain, deployer) {
   const jettonMinter = JettonMinter.createFromConfig({
     admin: deployer.address,
     content: beginCell().storeStringTail('TestToken').endCell()
@@ -95,6 +102,7 @@ describe('WalletAccountTon', () => {
   afterEach(() => {
     account.dispose()
     restoreMathRandom()
+    restoreDateNow()
   })
 
   describe('constructor', () => {
@@ -210,7 +218,7 @@ describe('WalletAccountTon', () => {
         success: true
       })
 
-      expect(hash).toBeDefined()
+      expect(hash).toBe('8ffd77bd8c288153ace6af368f8242504bbe31e74c911bd5b9851e981281011f')
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
     })
@@ -221,13 +229,14 @@ describe('WalletAccountTon', () => {
         value: 1_000_000
       }
 
+      global.Date.now = jest.fn(() => 3000000000000)
       const result1 = await account.sendTransaction(TRANSACTION)
       const result2 = await account.sendTransaction(TRANSACTION)
       const result3 = await account.sendTransaction(TRANSACTION)
 
-      expect(result1.hash).toBeDefined()
-      expect(result2.hash).toBeDefined()
-      expect(result3.hash).toBeDefined()
+      expect(result1.hash).toBe('fee3cb87605424ffa9fd23da23b10ab71856371286d2b92481eb6f5e52c408d0')
+      expect(result2.hash).toBe('37eea3745d012fd0b687676517e87bafe0ae6933afb4c4aaa65bc098812237ca')
+      expect(result3.hash).toBe('02540de8ae0b1e499a46b7c5ec733bedcacaa2bf426570d29c4ae25a14eca588')
 
       expect(result1.hash).not.toBe(result2.hash)
       expect(result2.hash).not.toBe(result3.hash)
@@ -238,7 +247,7 @@ describe('WalletAccountTon', () => {
         const info = tx.inMessage.info
         if (info.type !== 'internal') return false
         return info.src?.equals(account._wallet.address) &&
-               info.dest?.equals(recipient._wallet.address)
+          info.dest?.equals(recipient._wallet.address)
       })
 
       expect(tonTransfers.length).toBe(3)
@@ -305,13 +314,19 @@ describe('WalletAccountTon', () => {
         amount: 1_000
       }
 
+      global.Math.random = jest.fn()
+        .mockReturnValueOnce(0.1).mockReturnValueOnce(0.2)
+        .mockReturnValueOnce(0.3).mockReturnValueOnce(0.4)
+        .mockReturnValueOnce(0.5).mockReturnValueOnce(0.6)
+      global.Date.now = jest.fn(() => 3000000000000)
+
       const result1 = await account.transfer(TRANSFER)
       const result2 = await account.transfer(TRANSFER)
       const result3 = await account.transfer(TRANSFER)
 
-      expect(result1.hash).toBeDefined()
-      expect(result2.hash).toBeDefined()
-      expect(result3.hash).toBeDefined()
+      expect(result1.hash).toBe('7b2642875123f7259619b9a2b7836295b8c4e60fd4ccb81fdb2d19c75868b73d')
+      expect(result2.hash).toBe('e36b6b040ea2d435c9448fc10a114557fe9c6cf6741d6ebe1979e89dd96cb045')
+      expect(result3.hash).toBe('fa4d2dbff39c89f69f8986f4d507398da99dbe44a32fdbac380267b6f1f5fa2c')
 
       expect(result1.hash).not.toBe(result2.hash)
       expect(result2.hash).not.toBe(result3.hash)
@@ -324,7 +339,7 @@ describe('WalletAccountTon', () => {
         const info = tx.inMessage.info
         if (info.type !== 'internal') return false
         return info.src?.equals(account._wallet.address) &&
-               info.dest?.equals(accountJettonWalletAddress)
+          info.dest?.equals(accountJettonWalletAddress)
       })
 
       expect(jettonTransfers.length).toBe(3)
