@@ -83,7 +83,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      * @param {TonTransaction} tx - The transaction.
      * @returns {Promise<MessageRelaxed>} The internal message.
      */
-    protected _getTransactionMessage({ to, value, bounceable }: TonTransaction): Promise<MessageRelaxed>;
+    protected _getTransactionMessage({ to, value, bounceable, body }: TonTransaction): Promise<MessageRelaxed>;
     /**
      * Creates and returns an internal message to execute the given token transfer.
      *
@@ -109,12 +109,12 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      */
     protected _getTransferFee(transfer: Cell): Promise<bigint>;
     /**
-     * Generates and returns a message body with a unique comment.
+     * Generates and returns a random 64-bit unsigned integer for use as a queryId.
      *
      * @protected
-     * @returns {Promise<Cell>} The unique message body.
+     * @returns {bigint} The random queryId.
      */
-    protected _generateUniqueMessageBody(): Promise<Cell>;
+    protected _generateQueryId(): bigint;
 }
 export type OpenedContract<F> = import("@ton/ton").OpenedContract<F>;
 export type MessageRelaxed = import("@ton/ton").MessageRelaxed;
@@ -135,6 +135,10 @@ export type TonTransaction = {
      * - If set, overrides the bounceability of the transaction.
      */
     bounceable?: boolean;
+    /**
+     * - Optional message body.
+     */
+    body?: string | Cell;
 };
 export type TonClientConfig = {
     /**
