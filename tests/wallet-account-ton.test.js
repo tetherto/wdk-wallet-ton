@@ -19,11 +19,6 @@ function restoreMathRandom () {
   global.Math.random = originalMathRandom
 }
 
-// The timeout field in TON external messages depends on seqno:
-// - seqno=0: timeout = 0xFFFFFFFF (all 1s) - always deterministic
-// - seqno>0: timeout = Math.floor(Date.now() / 1000) + 60 - uses current time
-// Since hash = SHA256(opCode + walletId + timeout + seqno + actions + signature),
-// we need to mock Date.now() to get reproducible hashes for seqno > 0
 const originalDateNow = Date.now
 function restoreDateNow () {
   global.Date.now = originalDateNow
@@ -229,6 +224,10 @@ describe('WalletAccountTon', () => {
         value: 1_000_000
       }
 
+      // TON timeout depends on seqno:
+      // - seqno=0: never expires
+      // - seqno>0: now + 60 seconds
+      // Timeout affects transaction hash, so mock Date.now() for consistent tests
       global.Date.now = jest.fn(() => 3000000000000)
       const result1 = await account.sendTransaction(TRANSACTION)
       const result2 = await account.sendTransaction(TRANSACTION)
