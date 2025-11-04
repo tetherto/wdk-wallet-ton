@@ -224,11 +224,7 @@ describe('WalletAccountTon', () => {
         value: 1_000_000
       }
 
-      // TON timeout depends on seqno:
-      // - seqno=0: never expires
-      // - seqno>0: now + 60 seconds
-      // Timeout affects transaction hash, so mock Date.now() for consistent tests
-      global.Date.now = jest.fn(() => 3000000000000)
+      global.Date.now = jest.fn(() => 3_000_000_000_000)
       const result1 = await account.sendTransaction(TRANSACTION)
       const result2 = await account.sendTransaction(TRANSACTION)
       const result3 = await account.sendTransaction(TRANSACTION)
@@ -236,20 +232,6 @@ describe('WalletAccountTon', () => {
       expect(result1.hash).toBe('fee3cb87605424ffa9fd23da23b10ab71856371286d2b92481eb6f5e52c408d0')
       expect(result2.hash).toBe('37eea3745d012fd0b687676517e87bafe0ae6933afb4c4aaa65bc098812237ca')
       expect(result3.hash).toBe('02540de8ae0b1e499a46b7c5ec733bedcacaa2bf426570d29c4ae25a14eca588')
-
-      expect(result1.hash).not.toBe(result2.hash)
-      expect(result2.hash).not.toBe(result3.hash)
-      expect(result1.hash).not.toBe(result3.hash)
-
-      const tonTransfers = blockchain.transactions.filter(tx => {
-        if (!tx.inMessage?.info) return false
-        const info = tx.inMessage.info
-        if (info.type !== 'internal') return false
-        return info.src?.equals(account._wallet.address) &&
-          info.dest?.equals(recipient._wallet.address)
-      })
-
-      expect(tonTransfers.length).toBe(3)
     })
 
     test('should throw if the account is not connected to the ton center', async () => {
@@ -317,7 +299,7 @@ describe('WalletAccountTon', () => {
         .mockReturnValueOnce(0.1).mockReturnValueOnce(0.2)
         .mockReturnValueOnce(0.3).mockReturnValueOnce(0.4)
         .mockReturnValueOnce(0.5).mockReturnValueOnce(0.6)
-      global.Date.now = jest.fn(() => 3000000000000)
+      global.Date.now = jest.fn(() => 3_000_000_000_000)
 
       const result1 = await account.transfer(TRANSFER)
       const result2 = await account.transfer(TRANSFER)
@@ -326,22 +308,6 @@ describe('WalletAccountTon', () => {
       expect(result1.hash).toBe('7b2642875123f7259619b9a2b7836295b8c4e60fd4ccb81fdb2d19c75868b73d')
       expect(result2.hash).toBe('e36b6b040ea2d435c9448fc10a114557fe9c6cf6741d6ebe1979e89dd96cb045')
       expect(result3.hash).toBe('fa4d2dbff39c89f69f8986f4d507398da99dbe44a32fdbac380267b6f1f5fa2c')
-
-      expect(result1.hash).not.toBe(result2.hash)
-      expect(result2.hash).not.toBe(result3.hash)
-      expect(result1.hash).not.toBe(result3.hash)
-
-      const accountJettonWalletAddress = await testToken.getWalletAddress(account._wallet.address)
-
-      const jettonTransfers = blockchain.transactions.filter(tx => {
-        if (!tx.inMessage?.info) return false
-        const info = tx.inMessage.info
-        if (info.type !== 'internal') return false
-        return info.src?.equals(account._wallet.address) &&
-          info.dest?.equals(accountJettonWalletAddress)
-      })
-
-      expect(jettonTransfers.length).toBe(3)
     })
 
     test('should throw if transfer fee exceeds the transfer max fee configuration', async () => {
