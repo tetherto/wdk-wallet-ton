@@ -1,20 +1,28 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals'
 
-import { Address, beginCell } from '@ton/ton'
+import { Address, beginCell, SendMode } from '@ton/ton'
 import { JettonMinter } from '@ton-community/assets-sdk'
-import * as uuid from 'uuid'
 
 import * as bip39 from 'bip39'
 
 import BlockchainWithLogs from './blockchain-with-logs.js'
 import FakeTonClient, { ACTIVE_ACCOUNT_FEE } from './fake-ton-client.js'
 
-const uuidv4Mock = jest.fn()
+function calculateQueryId (highRandom, lowRandom) {
+  const high = BigInt(Math.floor(highRandom * 0x100000000))
+  const low = BigInt(Math.floor(lowRandom * 0x100000000))
+  const queryId = (high << 32n) | low
+  return queryId
+}
+const originalMathRandom = Math.random
+function restoreMathRandom () {
+  global.Math.random = originalMathRandom
+}
 
-await jest.unstable_mockModule('uuid', () => ({
-  ...uuid,
-  v4: uuidv4Mock
-}))
+const originalDateNow = Date.now
+function restoreDateNow () {
+  global.Date.now = originalDateNow
+}
 
 const { WalletAccountReadOnlyTon, WalletAccountTon } = await import('../index.js')
 
@@ -46,9 +54,7 @@ const TREASURY_BALANCE = 1_000_000_000_000n
 const INITIAL_BALANCE = 1_000_000_000n
 const INITIAL_TOKEN_BALANCE = 100_000n
 
-const DUMMY_UUID_V4 = '1ebd0796-db99-4b45-a0c1-7fd9be0ddfda'
-
-async function deployTestToken (blockchain, deployer) {
+async function deployTestToken(blockchain, deployer) {
   const jettonMinter = JettonMinter.createFromConfig({
     admin: deployer.address,
     content: beginCell().storeStringTail('TestToken').endCell()
@@ -90,6 +96,8 @@ describe('WalletAccountTon', () => {
 
   afterEach(() => {
     account.dispose()
+    restoreMathRandom()
+    restoreDateNow()
   })
 
   describe('constructor', () => {
@@ -174,8 +182,6 @@ describe('WalletAccountTon', () => {
         value: 1_000_000
       }
 
-      uuidv4Mock.mockImplementation(() => DUMMY_UUID_V4)
-
       const { hash, fee } = await account.sendTransaction(TRANSACTION)
 
       expect(blockchain.transactions).toHaveTransaction({
@@ -185,7 +191,7 @@ describe('WalletAccountTon', () => {
         success: true
       })
 
-      expect(hash).toBe('731189bbe84a4e9b72ff6a5e83259a194b123a6215418eb483cb3ec41fd097e3')
+      expect(hash).toBe('fee3cb87605424ffa9fd23da23b10ab71856371286d2b92481eb6f5e52c408d0')
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
     })
@@ -197,8 +203,6 @@ describe('WalletAccountTon', () => {
         bounceable: true
       }
 
-      uuidv4Mock.mockImplementation(() => DUMMY_UUID_V4)
-
       const { hash, fee } = await account.sendTransaction(TRANSACTION)
 
       expect(blockchain.transactions).toHaveTransaction({
@@ -209,9 +213,25 @@ describe('WalletAccountTon', () => {
         success: true
       })
 
-      expect(hash).toBe('731189bbe84a4e9b72ff6a5e83259a194b123a6215418eb483cb3ec41fd097e3')
+      expect(hash).toBe('8ffd77bd8c288153ace6af368f8242504bbe31e74c911bd5b9851e981281011f')
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
+    })
+
+    test('should generate unique hashes for identical transactions (seqno in transfer ensures uniqueness)', async () => {
+      const TRANSACTION = {
+        to: RECIPIENT.address,
+        value: 1_000_000
+      }
+
+      global.Date.now = jest.fn(() => 3_000_000_000_000)
+      const result1 = await account.sendTransaction(TRANSACTION)
+      const result2 = await account.sendTransaction(TRANSACTION)
+      const result3 = await account.sendTransaction(TRANSACTION)
+
+      expect(result1.hash).toBe('fee3cb87605424ffa9fd23da23b10ab71856371286d2b92481eb6f5e52c408d0')
+      expect(result2.hash).toBe('37eea3745d012fd0b687676517e87bafe0ae6933afb4c4aaa65bc098812237ca')
+      expect(result3.hash).toBe('02540de8ae0b1e499a46b7c5ec733bedcacaa2bf426570d29c4ae25a14eca588')
     })
 
     test('should throw if the account is not connected to the ton center', async () => {
@@ -230,7 +250,8 @@ describe('WalletAccountTon', () => {
         amount: 1_000
       }
 
-      uuidv4Mock.mockImplementation(() => DUMMY_UUID_V4)
+      global.Math.random = jest.fn().mockReturnValueOnce(0.5).mockReturnValueOnce(0.25)
+      const expectedQueryId = calculateQueryId(0.5, 0.25)
 
       const { hash, fee } = await account.transfer(TRANSFER)
 
@@ -238,20 +259,15 @@ describe('WalletAccountTon', () => {
 
       const recipientJettonWalletAddress = await testToken.getWalletAddress(Address.parse(TRANSFER.recipient))
 
-      const messageBody = beginCell()
-        .storeUint(0, 32)
-        .storeStringTail(DUMMY_UUID_V4)
-        .endCell()
-
       const internalTransferBody = beginCell()
         .storeUint(0x0f8a7ea5, 32)
-        .storeUint(0, 64)
+        .storeUint(expectedQueryId, 64)
         .storeCoins(TRANSFER.amount)
         .storeAddress(recipient._wallet.address)
         .storeAddress(account._wallet.address)
         .storeBit(false)
         .storeCoins(1n)
-        .storeMaybeRef(messageBody)
+        .storeMaybeRef(null)
         .endCell()
 
       expect(blockchain.transactions).toHaveTransaction({
@@ -267,9 +283,31 @@ describe('WalletAccountTon', () => {
         success: true
       })
 
-      expect(hash).toBe('ae9694ebfad8527c14d286bf601c837a97b0e4dd56afdc8fbf067ed8c73e7fd1')
+      expect(hash).toBe('80d5f87f50b39be73b038e968dc19bae93ae7a216287ee604575f7bd3a99a957')
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
+    })
+
+    test('should generate different hashes for identical token transfers (queryId ensures uniqueness)', async () => {
+      const TRANSFER = {
+        token: testToken.address.toString(),
+        recipient: RECIPIENT.address,
+        amount: 1_000
+      }
+
+      global.Math.random = jest.fn()
+        .mockReturnValueOnce(0.1).mockReturnValueOnce(0.2)
+        .mockReturnValueOnce(0.3).mockReturnValueOnce(0.4)
+        .mockReturnValueOnce(0.5).mockReturnValueOnce(0.6)
+      global.Date.now = jest.fn(() => 3_000_000_000_000)
+
+      const result1 = await account.transfer(TRANSFER)
+      const result2 = await account.transfer(TRANSFER)
+      const result3 = await account.transfer(TRANSFER)
+
+      expect(result1.hash).toBe('7b2642875123f7259619b9a2b7836295b8c4e60fd4ccb81fdb2d19c75868b73d')
+      expect(result2.hash).toBe('e36b6b040ea2d435c9448fc10a114557fe9c6cf6741d6ebe1979e89dd96cb045')
+      expect(result3.hash).toBe('fa4d2dbff39c89f69f8986f4d507398da99dbe44a32fdbac380267b6f1f5fa2c')
     })
 
     test('should throw if transfer fee exceeds the transfer max fee configuration', async () => {
