@@ -1,24 +1,26 @@
-import { beforeEach, describe, expect, jest, test } from '@jest/globals'
+import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals'
 
 import { Address, beginCell } from '@ton/ton'
 import { JettonMinter } from '@ton-community/assets-sdk'
-import * as uuid from 'uuid'
 
 import BlockchainWithLogs from '../blockchain-with-logs.js'
 import FakeTonClient, { ACTIVE_ACCOUNT_FEE } from '../fake-ton-client.js'
 
-const uuidv4Mock = jest.fn()
+function calculateQueryId (highRandom, lowRandom) {
+  const high = BigInt(Math.floor(highRandom * 0x100000000))
+  const low = BigInt(Math.floor(lowRandom * 0x100000000))
+  const queryId = (high << 32n) | low
+  return queryId
+}
 
-await jest.unstable_mockModule('uuid', () => ({
-  ...uuid,
-  v4: uuidv4Mock
-}))
+const originalMathRandom = Math.random
+function restoreMathRandom () {
+  global.Math.random = originalMathRandom
+}
 
 const abs = x => x < 0n ? -x : x
 
 const { default: WalletManagerTon, WalletAccountTon } = await import('../../index.js')
-
-const DUMMY_UUID_V4 = '1ebd0796-db99-4b45-a0c1-7fd9be0ddfda'
 
 const SEED_PHRASE = 'cook voyage document eight skate token alien guide drink uncle term abuse'
 
@@ -78,8 +80,6 @@ describe('@wdk/wallet-ton', () => {
   }
 
   beforeEach(async () => {
-    uuidv4Mock.mockReturnValue(DUMMY_UUID_V4)
-
     blockchain = await BlockchainWithLogs.create()
     treasury = await blockchain.treasury('treasury', { balance: TREASURY_BALANCE })
     testToken = await deployTestToken(blockchain, treasury)
@@ -92,8 +92,10 @@ describe('@wdk/wallet-ton', () => {
       await sendTonsTo(address, INITIAL_BALANCE, { init: account._wallet.init })
       await sendTestTokensTo(address, INITIAL_TOKEN_BALANCE)
     }
-    
-    uuidv4Mock.mockImplementation(() => DUMMY_UUID_V4)
+  })
+
+  afterEach(() => {
+    restoreMathRandom()
   })
 
   test('should derive an account, quote the cost of a tx and send the tx', async () => {
@@ -137,7 +139,7 @@ describe('@wdk/wallet-ton', () => {
     const finalBalance0 = await account0.getBalance()
     const finalBalance1 = await account1.getBalance()
 
-    const fee = 3202800n
+    const fee = 3087600n
     const receivingFee = 311200n
 
     expect(abs(balance0 - finalBalance0 - 1_000_000n - fee)).toBeLessThanOrEqual(1n)
@@ -154,6 +156,11 @@ describe('@wdk/wallet-ton', () => {
       amount: 1_000n
     }
 
+    global.Math.random = jest.fn()
+      .mockReturnValueOnce(0.5).mockReturnValueOnce(0.25)
+      .mockReturnValueOnce(0.5).mockReturnValueOnce(0.25)
+    const expectedQueryId = calculateQueryId(0.5, 0.25)
+
     const { fee: quoteFee } = await account0.quoteTransfer(TRANSFER)
 
     const { hash, fee } = await account0.transfer(TRANSFER)
@@ -161,20 +168,15 @@ describe('@wdk/wallet-ton', () => {
     const account0JettonWalletAddress = await testToken.getWalletAddress(Address.parse(ACCOUNT_0.address))
     const account1JettonWalletAddress = await testToken.getWalletAddress(Address.parse(ACCOUNT_1.address))
 
-    const messageBody = beginCell()
-      .storeUint(0, 32)
-      .storeStringTail(DUMMY_UUID_V4)
-      .endCell()
-
     const internalTransferBody = beginCell()
       .storeUint(0x0f8a7ea5, 32)
-      .storeUint(0, 64)
+      .storeUint(expectedQueryId, 64)
       .storeCoins(TRANSFER.amount)
       .storeAddress(account1._wallet.address)
       .storeAddress(account0._wallet.address)
       .storeBit(false)
       .storeCoins(1n)
-      .storeMaybeRef(messageBody)
+      .storeMaybeRef(null)
       .endCell()
 
     expect(blockchain.transactions).toHaveTransaction({
@@ -194,7 +196,7 @@ describe('@wdk/wallet-ton', () => {
 
     expect(fee).toBe(quoteFee)
     
-    expect(hash).toBe('ae9694ebfad8527c14d286bf601c837a97b0e4dd56afdc8fbf067ed8c73e7fd1')
+    expect(hash).toBe('80d5f87f50b39be73b038e968dc19bae93ae7a216287ee604575f7bd3a99a957')
   })
 
   test('should derive two accounts by their paths, transfer a token from account 0 to 1 and get the correct balances and token balances', async () => {
@@ -216,7 +218,7 @@ describe('@wdk/wallet-ton', () => {
 
     const finalBalance0 = await account0.getBalance()
 
-    const fee = 31888834n
+    const fee = 31216833n
 
     expect(abs(balance0 - finalBalance0 - fee)).toBeLessThanOrEqual(1n)
 
