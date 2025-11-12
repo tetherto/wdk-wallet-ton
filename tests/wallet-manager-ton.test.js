@@ -21,7 +21,8 @@ describe('WalletManagerTon', () => {
 
       expect(account).toBeInstanceOf(WalletAccountTon)
 
-      expect(account.path).toBe("m/44'/607'/0'/0/0")
+      expect(account.path).toBe("m/44'/607'/0'")
+      expect(await account.getAddress()).toBe("UQASomfWf2V7N46QrW4umfpARQBwKORp_z6I_8u2jUG29cYa")
     })
 
     test('should return the account at the given index', async () => {
@@ -29,12 +30,30 @@ describe('WalletManagerTon', () => {
 
       expect(account).toBeInstanceOf(WalletAccountTon)
 
-      expect(account.path).toBe("m/44'/607'/0'/0/3")
+      expect(account.path).toBe("m/44'/607'/3'")
     })
 
     test('should throw if the index is a negative number', async () => {
       await expect(wallet.getAccount(-1))
         .rejects.toThrow('Invalid child index: -1')
+    })
+  })
+
+  describe('getAddress', () => {
+    test('should return consistent address at index 0 by default', async () => {
+      const account = await wallet.getAccount()
+
+      expect(await account.getAddress()).toBe("UQASomfWf2V7N46QrW4umfpARQBwKORp_z6I_8u2jUG29cYa")
+    })
+
+    test('should return different addresses for different account indices', async () => {
+      const account1 = await wallet.getAccount(1)
+      const account2 = await wallet.getAccount(2)
+      const account3 = await wallet.getAccount(3)
+
+      expect(await account1.getAddress()).toBe("UQD3CRdkxEJL89-0TvBLTon261m8ImL2ivGgQ_50OW-XhKpY")
+      expect(await account2.getAddress()).toBe("UQAHSZQKm9kgS7R9rj9W0MsiGae7_F83h48yATo8KlacmFlp")
+      expect(await account3.getAddress()).toBe("UQA6jD3MrIfoQjNMiXzVv461JfqtZ3cSGkjV4i85tU5tKFlJ")
     })
   })
 
