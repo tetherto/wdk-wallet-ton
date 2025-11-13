@@ -24,16 +24,16 @@ const { default: WalletManagerTon, WalletAccountTon } = await import('../../inde
 
 const SEED_PHRASE = 'cook voyage document eight skate token alien guide drink uncle term abuse'
 
-const PUBLIC_KEY_0 = 'f2ade24192b5a0fba669da730d105088a3a848519f43b27f24bdd8395eb26b8f'
-const PRIVATE_KEY_0 = '904a9fec5f3e5bea8f1b4c5180828843e6acd58c198967fd56b4159b44b5a68ef2ade24192b5a0fba669da730d105088a3a848519f43b27f24bdd8395eb26b8f'
+const PUBLIC_KEY_0 = '5b963f3bf46b01c8641255e9f03827708cb2bde63451404f4cdc37b195059eb5'
+const PRIVATE_KEY_0 = '8da177404dd00fcffd21951d608a37036c4de0e883c8cbf97b8abee5cf3dc3e35b963f3bf46b01c8641255e9f03827708cb2bde63451404f4cdc37b195059eb5'
 
-const PUBLIC_KEY_1 = '7ad5a20de91962a8afd8ff6247d2928df3f557e404154dde6471800c92fdacb1'
-const PRIVATE_KEY_1 = '4ef354693bf43b4a71cfb562ed7d41fdba27521faccbb27336715fad849364457ad5a20de91962a8afd8ff6247d2928df3f557e404154dde6471800c92fdacb1'
+const PUBLIC_KEY_1 = '7d30d6ca34b2f19a1fcce37352c959ba13fbbae45c318da3a0e74095a915362c'
+const PRIVATE_KEY_1 = '9e37403f3c3e38deff1b58402a51ae069caf3fb61bf517108dc8e9536b2fb89d7d30d6ca34b2f19a1fcce37352c959ba13fbbae45c318da3a0e74095a915362c'
 
 const ACCOUNT_0 = {
   index: 0,
-  path: "m/44'/607'/0'/0/0",
-  address: 'UQAvTZZjLwb1qnnuP1szbILyQyZT2zpSRX_Bw-fh4O9QojNi',
+  path: "m/44'/607'/0'",
+  address: 'UQASomfWf2V7N46QrW4umfpARQBwKORp_z6I_8u2jUG29cYa',
   keyPair: {
     publicKey: Buffer.from(PUBLIC_KEY_0, 'hex'),
     privateKey: Buffer.from(PRIVATE_KEY_0, 'hex')
@@ -42,8 +42,8 @@ const ACCOUNT_0 = {
 
 const ACCOUNT_1 = {
   index: 1,
-  path: "m/44'/607'/0'/0/1",
-  address: 'UQCKSPZPsdyq3FRW9SHtRNY1Ni6qCNbTErQLHUpytJFej_vG',
+  path: "m/44'/607'/1'",
+  address: 'UQD3CRdkxEJL89-0TvBLTon261m8ImL2ivGgQ_50OW-XhKpY',
   keyPair: {
     publicKey: Buffer.from(PUBLIC_KEY_1, 'hex'),
     privateKey: Buffer.from(PRIVATE_KEY_1, 'hex')
@@ -88,7 +88,7 @@ describe('@wdk/wallet-ton', () => {
     wallet = new WalletManagerTon(SEED_PHRASE, { tonClient })
     
     for (const { index, address } of [ACCOUNT_0, ACCOUNT_1]) {
-      const account = new WalletAccountTon(SEED_PHRASE, `0'/0/${index}`)
+      const account = new WalletAccountTon(SEED_PHRASE, `${index}'`)
       await sendTonsTo(address, INITIAL_BALANCE, { init: account._wallet.init })
       await sendTestTokensTo(address, INITIAL_TOKEN_BALANCE)
     }
@@ -147,8 +147,8 @@ describe('@wdk/wallet-ton', () => {
   })
 
   test('should derive an account by its path, quote the cost of transferring a token and transfer a token', async () => {
-    const account0 = await wallet.getAccountByPath("0'/0/0")
-    const account1 = await wallet.getAccountByPath("0'/0/1")
+    const account0 = await wallet.getAccountByPath("0'")
+    const account1 = await wallet.getAccountByPath("1'")
 
     const TRANSFER = {
       token: testToken.address.toString(),
@@ -196,12 +196,12 @@ describe('@wdk/wallet-ton', () => {
 
     expect(fee).toBe(quoteFee)
     
-    expect(hash).toBe('80d5f87f50b39be73b038e968dc19bae93ae7a216287ee604575f7bd3a99a957')
+    expect(hash).toBe('1709a81900680ad42b9d97b5c3b3dbda78dc794ec8e87ab727bc04c8e3075f36')
   })
 
   test('should derive two accounts by their paths, transfer a token from account 0 to 1 and get the correct balances and token balances', async () => {
-    const account0 = await wallet.getAccountByPath("0'/0/0")
-    const account1 = await wallet.getAccountByPath("0'/0/1")
+    const account0 = await wallet.getAccountByPath("0'")
+    const account1 = await wallet.getAccountByPath("1'")
 
     const balance0 = await account0.getBalance()
 
