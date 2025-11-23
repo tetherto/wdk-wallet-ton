@@ -21,7 +21,7 @@ describe('WalletManagerTon', () => {
 
       expect(account).toBeInstanceOf(WalletAccountTon)
 
-      expect(account.path).toBe("m/44'/607'/0'/0/0")
+      expect(account.path).toBe("m/44'/607'/0'")
     })
 
     test('should return the account at the given index', async () => {
@@ -29,7 +29,7 @@ describe('WalletManagerTon', () => {
 
       expect(account).toBeInstanceOf(WalletAccountTon)
 
-      expect(account.path).toBe("m/44'/607'/0'/0/3")
+      expect(account.path).toBe("m/44'/607'/3'")
     })
 
     test('should throw if the index is a negative number', async () => {

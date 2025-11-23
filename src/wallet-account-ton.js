@@ -98,7 +98,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
    * @type {number}
    */
   get index () {
-    return +this._path.split('/').pop()
+    return +this._path.split('/').pop().replace("'", '')
   }
 
   /**
