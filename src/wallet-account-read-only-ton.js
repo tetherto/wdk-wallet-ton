@@ -17,6 +17,8 @@ import { WalletAccountReadOnly } from '@tetherto/wdk-wallet'
 
 import { Address, beginCell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
 
+import { signVerify } from '@ton/crypto'
+
 /** @typedef {import('@ton/ton').Cell} Cell */
 /** @typedef {import('@ton/ton').OpenedContract} OpenedContract */
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
@@ -107,6 +109,19 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
        */
       this._contract = this._tonClient.open(this._wallet)
     }
+  }
+
+  /**
+   * Verifies a message's signature.
+   *
+   * @param {string} message - The original message.
+   * @param {string} signature - The signature to verify.
+   * @returns {Promise<boolean>} True if the signature is valid.
+   */
+  async verify (message, signature) {
+    const _message = Buffer.from(message)
+    const _signature = Buffer.from(signature, 'hex')
+    return signVerify(_message, _signature, this._wallet.publicKey)
   }
 
   /**
