@@ -181,16 +181,17 @@ console.log('Transfer fee estimate:', transferQuote.fee, 'nanotons')
 
 ### Message Signing and Verification
 
-Sign and verify messages using `WalletAccountTon`.
+Sign messages using `WalletAccountTon` and verify signatures using `WalletAccountReadOnlyTon`.
 
 ```javascript
-// Sign a message
+// Sign a message (requires WalletAccountTon)
 const message = 'Hello, TON!'
 const signature = await account.sign(message)
 console.log('Signature:', signature)
 
-// Verify a signature
-const isValid = await account.verify(message, signature)
+// Verify a signature (can use WalletAccountReadOnlyTon)
+const readOnlyAccount = await account.toReadOnlyAccount()
+const isValid = await readOnlyAccount.verify(message, signature)
 console.log('Signature valid:', isValid)
 ```
 
@@ -352,7 +353,6 @@ new WalletAccountTon(seed, path, config)
 |--------|-------------|---------|
 | `getAddress()` | Returns the account's TON address | `Promise<string>` |
 | `sign(message)` | Signs a message using the account's private key | `Promise<string>` |
-| `verify(message, signature)` | Verifies a message signature | `Promise<boolean>` |
 | `sendTransaction(tx)` | Sends a TON transaction | `Promise<{hash: string, fee: bigint}>` |
 | `quoteSendTransaction(tx)` | Estimates the fee for a TON transaction | `Promise<{fee: bigint}>` |
 | `transfer(options)` | Transfers Jetton tokens to another address | `Promise<{hash: string, fee: bigint}>` |
@@ -384,21 +384,6 @@ Signs a message using the account's private key.
 ```javascript
 const signature = await account.sign('Hello TON!')
 console.log('Signature:', signature)
-```
-
-##### `verify(message, signature)`
-Verifies a message signature using the account's public key.
-
-**Parameters:**
-- `message` (string): Original message
-- `signature` (string): Signature as hex string
-
-**Returns:** `Promise<boolean>` - True if signature is valid
-
-**Example:**
-```javascript
-const isValid = await account.verify('Hello TON!', signature)
-console.log('Signature valid:', isValid)
 ```
 
 ##### `sendTransaction(tx)`
@@ -561,6 +546,7 @@ new WalletAccountReadOnlyTon(publicKey, config)
 |--------|-------------|---------|
 | `getBalance()` | Returns the native TON balance (in nanotons) | `Promise<bigint>` |
 | `getTokenBalance(tokenAddress)` | Returns the balance of a specific Jetton token | `Promise<bigint>` |
+| `verify(message, signature)` | Verifies a message signature | `Promise<boolean>` |
 | `quoteSendTransaction(tx)` | Estimates the fee for a TON transaction | `Promise<{fee: bigint}>` |
 | `quoteTransfer(options)` | Estimates the fee for a Jetton transfer | `Promise<{fee: bigint}>` |
 
@@ -589,6 +575,21 @@ Returns the balance of a specific Jetton token.
 // Get USDT Jetton balance (6 decimals)
 const usdtBalance = await readOnlyAccount.getTokenBalance('EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs')
 console.log('USDT balance:', Number(usdtBalance) / 1e6)
+```
+
+##### `verify(message, signature)`
+Verifies a message signature using the account's public key.
+
+**Parameters:**
+- `message` (string): Original message
+- `signature` (string): Signature as hex string
+
+**Returns:** `Promise<boolean>` - True if signature is valid
+
+**Example:**
+```javascript
+const isValid = await readOnlyAccount.verify('Hello TON!', signature)
+console.log('Signature valid:', isValid)
 ```
 
 ##### `quoteSendTransaction(tx)`

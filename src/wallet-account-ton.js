@@ -13,7 +13,7 @@
 // limitations under the License.
 'use strict'
 
-import { sign, signVerify } from '@ton/crypto'
+import { sign } from '@ton/crypto'
 
 import { SendMode } from '@ton/ton'
 
@@ -133,19 +133,6 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
 
     return sign(_message, this._keyPair.secretKey)
       .toString('hex')
-  }
-
-  /**
-   * Verifies a message's signature.
-   *
-   * @param {string} message - The original message.
-   * @param {string} signature - The signature to verify.
-   * @returns {Promise<boolean>} True if the signature is valid.
-   */
-  async verify (message, signature) {
-    const _message = Buffer.from(message)
-    const _signature = Buffer.from(signature, 'hex')
-    return signVerify(_message, _signature, this._keyPair.publicKey)
   }
 
   /**
