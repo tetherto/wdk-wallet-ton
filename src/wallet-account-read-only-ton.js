@@ -15,9 +15,20 @@
 
 import { WalletAccountReadOnly } from '@tetherto/wdk-wallet'
 
-import { Address, beginCell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
+import {
+  Address,
+  beginCell,
+  fromNano,
+  internal,
+  SendMode,
+  toNano,
+  TonClient,
+  WalletContractV5R1
+} from '@ton/ton'
 
 import { signVerify } from '@ton/crypto'
+
+import FailoverProvider from 'wdk-failover-provider'
 
 /** @typedef {import('@ton/ton').Cell} Cell */
 /** @typedef {import('@ton/ton').OpenedContract} OpenedContract */
@@ -44,7 +55,8 @@ import { signVerify } from '@ton/crypto'
 
 /**
  * @typedef {Object} TonWalletConfig
- * @property {TonClientConfig | TonClient} [tonClient] - The ton client configuration, or an instance of the {@link TonClient} class.
+ * @property {TonClientConfig | TonClient | Array<TonClientConfig | TonClient>} [tonClient] - The ton client configuration, or an instance of the {@link TonClient} class.
+ * @property {number} [retries] - The number of retries in the failover mechanism.
  * @property {number | bigint} [transferMaxFee] - The maximum fee amount for transfer operations.
  */
 
@@ -61,7 +73,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    * @param {string | Uint8Array} publicKey - The account's public key.
    * @param {Omit<TonWalletConfig, 'transferMaxFee'>} [config] - The configuration object.
    */
-  constructor (publicKey, config = { }) {
+  constructor (publicKey, config = {}) {
     if (typeof publicKey === 'string') {
       publicKey = Buffer.from(publicKey, 'hex')
     }
@@ -88,27 +100,55 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      */
     this._wallet = wallet
 
-    if (config.tonClient) {
+    /**
+     * The ton client.
+     *
+     * @protected
+     * @type {TonClient | undefined}
+     */
+    this._tonClient = undefined
+
+    const { tonClient, retries = 3 } = config
+
+    if (Array.isArray(tonClient)) {
+      this._tonClient = tonClient
+        .reduce(
+          /**
+           * @param {FailoverProvider<TonClient>} failover
+           * @param {TonClientConfig | TonClient} client
+           */
+          (failover, client) =>
+            failover.addProvider(
+              client instanceof TonClient
+                ? client
+                : new TonClient({
+                  endpoint: client.url,
+                  apiKey: client.secretKey
+                })
+            ),
+          new FailoverProvider({ retries })
+        )
+        .initialize()
+    } else if (tonClient) {
       const { tonClient } = config
-
-      /**
-       * The ton client.
-       *
-       * @protected
-       * @type {TonClient | undefined}
-       */
-      this._tonClient = tonClient instanceof TonClient
-        ? tonClient
-        : new TonClient({ endpoint: tonClient.url, apiKey: tonClient.secretKey })
-
-      /**
-       * The v5r1 wallet's contract.
-       *
-       * @protected
-       * @type {OpenedContract<WalletContractV5R1> | undefined}
-       */
-      this._contract = this._tonClient.open(this._wallet)
+      this._tonClient =
+        tonClient instanceof TonClient
+          ? tonClient
+          : new TonClient({
+            endpoint: tonClient.url,
+            apiKey: tonClient.secretKey
+          })
+    } else {
+      this._tonClient = undefined
     }
+
+    /**
+     * The v5r1 wallet's contract.
+     *
+     * @protected
+     * @type {OpenedContract<WalletContractV5R1> | undefined}
+     */
+    this._contract = this._tonClient?.open(this._wallet)
   }
 
   /**
@@ -131,7 +171,9 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    */
   async getBalance () {
     if (!this._tonClient) {
-      throw new Error('The wallet must be connected to ton center to get balances.')
+      throw new Error(
+        'The wallet must be connected to ton center to get balances.'
+      )
     }
 
     const balance = await this._contract.getBalance()
@@ -147,13 +189,20 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    */
   async getTokenBalance (tokenAddress) {
     if (!this._tonClient) {
-      throw new Error('The wallet must be connected to ton center to get token balances.')
+      throw new Error(
+        'The wallet must be connected to ton center to get token balances.'
+      )
     }
 
     try {
-      const jettonWalletAddress = await this._getJettonWalletAddress(tokenAddress)
+      const jettonWalletAddress =
+        await this._getJettonWalletAddress(tokenAddress)
 
-      const { stack } = await this._tonClient.callGetMethod(jettonWalletAddress, 'get_wallet_data', [])
+      const { stack } = await this._tonClient.callGetMethod(
+        jettonWalletAddress,
+        'get_wallet_data',
+        []
+      )
 
       const balance = stack.readBigNumber()
 
@@ -175,7 +224,9 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    */
   async quoteSendTransaction (tx) {
     if (!this._tonClient) {
-      throw new Error('The wallet must be connected to ton center to quote send transaction operations.')
+      throw new Error(
+        'The wallet must be connected to ton center to quote send transaction operations.'
+      )
     }
 
     const message = await this._getTransactionMessage(tx)
@@ -194,7 +245,9 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
 
   async quoteTransfer (options) {
     if (!this._tonClient) {
-      throw new Error('The wallet must be connected to ton center to quote transfer operations.')
+      throw new Error(
+        'The wallet must be connected to ton center to quote transfer operations.'
+      )
     }
 
     const message = await this._getTokenTransferMessage(options)
@@ -216,7 +269,9 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
       limit: 1
     })
 
-    const response = await fetch(`${TON_CENTER_V3_URL}/transactionsByMessage?${query.toString()}`)
+    const response = await fetch(
+      `${TON_CENTER_V3_URL}/transactionsByMessage?${query.toString()}`
+    )
 
     const { transactions } = await response.json()
 
@@ -257,10 +312,16 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
 
     const address = this._wallet.address
 
-    const { stack } = await this._tonClient.callGetMethod(tokenAddress, 'get_wallet_address', [{
-      type: 'slice',
-      cell: beginCell().storeAddress(address).endCell()
-    }])
+    const { stack } = await this._tonClient.callGetMethod(
+      tokenAddress,
+      'get_wallet_address',
+      [
+        {
+          type: 'slice',
+          cell: beginCell().storeAddress(address).endCell()
+        }
+      ]
+    )
 
     const jettonWalletAddress = stack.readAddress()
 
@@ -358,11 +419,14 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
 
     const { code, data } = await this._tonClient.getContractState(address)
 
-    const { source_fees } = await this._tonClient.estimateExternalMessageFee(address, {
-      body: transfer,
-      initCode: !code ? this._wallet.init.code : null,
-      initData: !data ? this._wallet.init.data : null
-    })
+    const { source_fees } = await this._tonClient.estimateExternalMessageFee(
+      address,
+      {
+        body: transfer,
+        initCode: !code ? this._wallet.init.code : null,
+        initData: !data ? this._wallet.init.data : null
+      }
+    )
 
     const { in_fwd_fee, storage_fee, gas_fee, fwd_fee } = source_fees
 
