@@ -130,7 +130,6 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
         )
         .initialize()
     } else if (tonClient) {
-      const { tonClient } = config
       this._tonClient =
         tonClient instanceof TonClient
           ? tonClient
