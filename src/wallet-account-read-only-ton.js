@@ -14,6 +14,7 @@
 'use strict'
 
 import { WalletAccountReadOnly } from '@tetherto/wdk-wallet'
+import FailoverProvider from '@tetherto/wdk-failover-provider'
 
 import {
   Address,
@@ -28,12 +29,10 @@ import {
 
 import { signVerify } from '@ton/crypto'
 
-import FailoverProvider from 'wdk-failover-provider'
-
 /** @typedef {import('@ton/ton').Cell} Cell */
-/** @typedef {import('@ton/ton').OpenedContract} OpenedContract */
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
 /** @typedef {import('@ton/ton').Transaction} TonTransactionReceipt */
+/** @typedef {import('@ton/ton').OpenedContract} OpenedContract */
 
 /** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
 /** @typedef {import('@tetherto/wdk-wallet').TransferOptions} TransferOptions */
@@ -55,8 +54,8 @@ import FailoverProvider from 'wdk-failover-provider'
 
 /**
  * @typedef {Object} TonWalletConfig
- * @property {TonClientConfig | TonClient | Array<TonClientConfig | TonClient>} [tonClient] - The ton client configuration, or an instance of the {@link TonClient} class.
- * @property {number} [retries] - The number of retries in the failover mechanism.
+ * @property {TonClientConfig | TonClient | Array<TonClientConfig | TonClient>} [tonClient] - The ton configuration or ton client. It's also possible to provide an array of configs or clientss instead. In such case, connection errors will cause the wallet to automatically fallback on the next client in the list.
+ * @property {number} [retries] - If set and if 'tonClient' is a list of ton configs or ton clients, the number of additional retry attempts after the initial call fails. Total attempts = `1 + retries`. For example, `retries: 3` with 4 clients will try each client once before throwing. If `retries` exceeds the number of clients, the failover will loop back and retry already-failed clients in round-robin order. Default: 3.
  * @property {number | bigint} [transferMaxFee] - The maximum fee amount for transfer operations.
  */
 
@@ -111,34 +110,20 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
     const { tonClient, retries = 3 } = config
 
     if (Array.isArray(tonClient)) {
-      this._tonClient = tonClient
-        .reduce(
-          /**
-           * @param {FailoverProvider<TonClient>} failover
-           * @param {TonClientConfig | TonClient} client
-           */
-          (failover, client) =>
-            failover.addProvider(
-              client instanceof TonClient
-                ? client
-                : new TonClient({
-                  endpoint: client.url,
-                  apiKey: client.secretKey
-                })
-            ),
-          new FailoverProvider({ retries })
-        )
-        .initialize()
+      if (tonClient.length > 0) {
+        const failoverProvider = new FailoverProvider({ retries })
+        for (const entry of tonClient) {
+          const option = entry instanceof TonClient
+            ? entry
+            : new TonClient({ endpoint: entry.url, apiKey: entry.secretKey })
+          failoverProvider.addProvider(option)
+        }
+        this._tonClient = failoverProvider.initialize()
+      }
     } else if (tonClient) {
-      this._tonClient =
-        tonClient instanceof TonClient
-          ? tonClient
-          : new TonClient({
-            endpoint: tonClient.url,
-            apiKey: tonClient.secretKey
-          })
-    } else {
-      this._tonClient = undefined
+      this._tonClient = tonClient instanceof TonClient
+        ? tonClient
+        : new TonClient({ endpoint: tonClient.url, apiKey: tonClient.secretKey })
     }
 
     /**
