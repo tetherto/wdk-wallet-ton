@@ -14,6 +14,7 @@
 'use strict'
 
 import { WalletAccountReadOnly } from '@tetherto/wdk-wallet'
+
 import FailoverProvider from '@tetherto/wdk-failover-provider'
 
 import {
