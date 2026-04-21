@@ -45,6 +45,13 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon implement
      */
     sign(message: string): Promise<string>;
     /**
+     * Signs a transaction.
+     *
+     * @param {TonTransaction} tx - The transaction to sign.
+     * @returns {Promise<Cell>} The signed external-message body as a TON Cell.
+     */
+    signTransaction(tx: TonTransaction): Promise<Cell>;
+    /**
      * Sends a transaction.
      *
      * @param {TonTransaction} tx - The transaction.
@@ -71,6 +78,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon implement
 }
 export type MessageRelaxed = import("@ton/ton").MessageRelaxed;
 export type TonTransactionReceipt = import("@ton/ton").Transaction;
+export type Cell = import("@ton/core").Cell;
 export type IWalletAccount = import("@tetherto/wdk-wallet").IWalletAccount;
 export type KeyPair = import("@tetherto/wdk-wallet").KeyPair;
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;

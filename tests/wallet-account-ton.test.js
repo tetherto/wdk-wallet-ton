@@ -220,6 +220,31 @@ describe('WalletAccountTon', () => {
     })
   })
 
+  describe('signTransaction', () => {
+    test('should sign a transaction and return the signed transfer cell without broadcasting', async () => {
+      const TRANSACTION = {
+        to: RECIPIENT.address,
+        value: 1_000_000
+      }
+
+      const signedTransfer = await account.signTransaction(TRANSACTION)
+
+      expect(signedTransfer.hash().toString('hex')).toBe('fee3cb87605424ffa9fd23da23b10ab71856371286d2b92481eb6f5e52c408d0')
+
+      expect(blockchain.transactions).not.toHaveTransaction({
+        from: account._wallet.address,
+        to: recipient._wallet.address
+      })
+    })
+
+    test('should throw if the account is not connected to the ton center', async () => {
+      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0")
+
+      await expect(account.signTransaction({ }))
+        .rejects.toThrow('The wallet must be connected to ton center to sign transactions.')
+    })
+  })
+
   describe('transfer', () => {
     test('should successfully transfer tokens', async () => {
       const TRANSFER = {
