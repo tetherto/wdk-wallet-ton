@@ -193,9 +193,11 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
    * @returns {Promise<WalletAccountReadOnlyTon>} The read-only account.
    */
   async toReadOnlyAccount () {
-    const readOnlyAccount = new WalletAccountReadOnlyTon(this._keyPair.publicKey, this._config)
+    if (!this._tonReadOnlyAccount) {
+      this._tonReadOnlyAccount = new WalletAccountReadOnlyTon(this._keyPair.publicKey, this._config)
+    }
 
-    return readOnlyAccount
+    return this._tonReadOnlyAccount
   }
 
   /**
