@@ -129,14 +129,6 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
         ? tonClient
         : new TonClient({ endpoint: tonClient.url, apiKey: tonClient.secretKey })
     }
-
-    /**
-     * The v5r1 wallet's contract.
-     *
-     * @protected
-     * @type {OpenedContract<WalletContractV5R1> | undefined}
-     */
-    this._contract = this._tonClient?.open(this._wallet)
   }
 
   /**
@@ -286,6 +278,16 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
       })
       return transaction
     }
+  }
+
+  /**
+   * The v5r1 wallet's contract.
+   *
+   * @protected
+   * @type {OpenedContract<WalletContractV5R1> | undefined}
+   */
+  get _contract () {
+    return this._tonClient?.open(this._wallet)
   }
 
   /**
