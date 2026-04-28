@@ -166,7 +166,7 @@ export type TonWalletConfig = {
     /**
      * - If set and if 'tonClient' is a list of ton configs or ton clients, the number of additional retry attempts after the initial call fails. Total attempts = `1 + retries`. For example, `retries: 3` with 4 clients will try each client once before throwing. If `retries` exceeds the number of clients, the failover will loop back and retry already-failed clients in round-robin order. Default: 3.
      */
-    retries?: number
+    retries?: number;
     /**
      * - The maximum fee amount for transfer operations.
      */
