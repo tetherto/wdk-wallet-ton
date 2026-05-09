@@ -115,14 +115,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
 
     if (Array.isArray(tonClient)) {
       if (tonClient.length > 0) {
-        const failoverProvider = new FailoverProvider({ retries })
-        for (const entry of tonClient) {
-          const option = entry instanceof TonClient
-            ? entry
-            : new TonClient({ endpoint: entry.url, apiKey: entry.secretKey })
-          failoverProvider.addProvider(option)
-        }
-        this._tonClient = failoverProvider.initialize()
+        this._tonClient = WalletAccountReadOnlyTon._createTonClientWithFailoverApi(tonClient, retries)
       }
     } else if (tonClient) {
       this._tonClient = tonClient instanceof TonClient
@@ -278,6 +271,36 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
       })
       return transaction
     }
+  }
+
+  /**
+   * Creates a TON client whose internal API calls fail over across configured clients.
+   *
+   * @protected
+   * @param {Array<TonClientConfig | TonClient>} tonClients - TON client configs or clients.
+   * @param {number} retries - The number of failover retries.
+   * @returns {TonClient} The TON client with a failover API.
+   */
+  static _createTonClientWithFailoverApi (tonClients, retries) {
+    const failoverProvider = new FailoverProvider({ retries })
+
+    const clients = tonClients.map((entry) => {
+      return entry instanceof TonClient
+        ? entry
+        : new TonClient({ endpoint: entry.url, apiKey: entry.secretKey })
+    })
+
+    for (const client of clients) {
+      failoverProvider.addProvider(client.api)
+    }
+
+    const [primaryClient] = clients
+    const tonClient = new TonClient({
+      endpoint: primaryClient.parameters.endpoint
+    })
+    tonClient.api = failoverProvider.initialize()
+
+    return tonClient
   }
 
   /**

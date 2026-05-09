@@ -77,6 +77,15 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      */
     getTransactionReceipt(hash: string): Promise<TonTransactionReceipt | null>;
     /**
+     * Creates a TON client whose internal API calls fail over across configured clients.
+     *
+     * @protected
+     * @param {Array<TonClientConfig | TonClient>} tonClients - TON client configs or clients.
+     * @param {number} retries - The number of failover retries.
+     * @returns {TonClient} The TON client with a failover API.
+     */
+    protected static _createTonClientWithFailoverApi(tonClients: Array<TonClientConfig | TonClient>, retries: number): TonClient;
+    /**
      * Returns the jetton wallet address of the given jetton.
      *
      * @protected
