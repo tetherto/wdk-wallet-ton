@@ -29,6 +29,7 @@ import WalletAccountReadOnlyTon from './wallet-account-read-only-ton.js'
 
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
 /** @typedef {import('@ton/ton').Transaction} TonTransactionReceipt */
+/** @typedef {import('@ton/core').Cell} Cell */
 
 /** @typedef {import('@tetherto/wdk-wallet').IWalletAccount} IWalletAccount */
 
@@ -133,6 +134,22 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
 
     return sign(_message, this._keyPair.secretKey)
       .toString('hex')
+  }
+
+  /**
+   * Signs a transaction without broadcasting.
+   *
+   * @param {TonTransaction} tx - The transaction to sign.
+   * @returns {Promise<Cell>} The signed external-message body as a TON Cell. Call `cell.toBoc().toString('base64')` to obtain a wire-format payload ready for broadcast.
+   */
+  async signTransaction (tx) {
+    if (!this._tonClient) {
+      throw new Error('The wallet must be connected to ton center to sign transactions.')
+    }
+
+    const message = await this._getTransactionMessage(tx)
+
+    return await this._getTransfer(message)
   }
 
   /**
