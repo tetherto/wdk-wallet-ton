@@ -77,6 +77,15 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      */
     getTransactionReceipt(hash: string): Promise<TonTransactionReceipt | null>;
     /**
+     * Creates a TON client whose internal API calls fail over across configured clients.
+     *
+     * @protected
+     * @param {Array<TonClientConfig | TonClient>} tonClients - TON client configs or clients.
+     * @param {number} retries - The number of failover retries.
+     * @returns {TonClient} The TON client with a failover API.
+     */
+    protected static _createTonClientWithFailoverApi(tonClients: Array<TonClientConfig | TonClient>, retries: number): TonClient;
+    /**
      * Returns the jetton wallet address of the given jetton.
      *
      * @protected
@@ -160,9 +169,13 @@ export type TonClientConfig = {
 };
 export type TonWalletConfig = {
     /**
-     * - The ton client configuration, or an instance of the {@link TonClient} class.
+     * - The ton configuration or ton client {@link TonClient}. It's also possible to provide an array of configs or clients instead. In such case, connection errors will cause the wallet to automatically fallback on the next client in the list.
      */
-    tonClient?: TonClientConfig | TonClient;
+    tonClient?: TonClientConfig | TonClient | Array<TonClientConfig | TonClient>;
+    /**
+     * - If set and if 'tonClient' is a list of ton configs or ton clients, the number of additional retry attempts after the initial call fails. Total attempts = `1 + retries`. For example, `retries: 3` with 4 clients will try each client once before throwing. If `retries` exceeds the number of clients, the failover will loop back and retry already-failed clients in round-robin order. Default: 3.
+     */
+    retries?: number;
     /**
      * - The maximum fee amount for transfer operations.
      */
