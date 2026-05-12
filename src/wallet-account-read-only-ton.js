@@ -17,16 +17,7 @@ import { WalletAccountReadOnly } from '@tetherto/wdk-wallet'
 
 import FailoverProvider from '@tetherto/wdk-failover-provider'
 
-import {
-  Address,
-  beginCell,
-  fromNano,
-  internal,
-  SendMode,
-  toNano,
-  TonClient,
-  WalletContractV5R1
-} from '@ton/ton'
+import { Address, beginCell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
 
 import { signVerify } from '@ton/crypto'
 
@@ -76,7 +67,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    * @param {string | Uint8Array} publicKey - The account's public key.
    * @param {Omit<TonWalletConfig, 'transferMaxFee'>} [config] - The configuration object.
    */
-  constructor (publicKey, config = {}) {
+  constructor (publicKey, config = { }) {
     if (typeof publicKey === 'string') {
       publicKey = Buffer.from(publicKey, 'hex')
     }
@@ -152,9 +143,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    */
   async getBalance () {
     if (!this._tonClient) {
-      throw new Error(
-        'The wallet must be connected to ton center to get balances.'
-      )
+      throw new Error('The wallet must be connected to ton center to get balances.')
     }
 
     const balance = await this._contract.getBalance()
@@ -170,20 +159,13 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    */
   async getTokenBalance (tokenAddress) {
     if (!this._tonClient) {
-      throw new Error(
-        'The wallet must be connected to ton center to get token balances.'
-      )
+      throw new Error('The wallet must be connected to ton center to get token balances.')
     }
 
     try {
-      const jettonWalletAddress =
-        await this._getJettonWalletAddress(tokenAddress)
+      const jettonWalletAddress = await this._getJettonWalletAddress(tokenAddress)
 
-      const { stack } = await this._tonClient.callGetMethod(
-        jettonWalletAddress,
-        'get_wallet_data',
-        []
-      )
+      const { stack } = await this._tonClient.callGetMethod(jettonWalletAddress, 'get_wallet_data', [])
 
       const balance = stack.readBigNumber()
 
@@ -205,9 +187,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    */
   async quoteSendTransaction (tx) {
     if (!this._tonClient) {
-      throw new Error(
-        'The wallet must be connected to ton center to quote send transaction operations.'
-      )
+      throw new Error('The wallet must be connected to ton center to quote send transaction operations.')
     }
 
     const message = await this._getTransactionMessage(tx)
@@ -226,9 +206,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
 
   async quoteTransfer (options) {
     if (!this._tonClient) {
-      throw new Error(
-        'The wallet must be connected to ton center to quote transfer operations.'
-      )
+      throw new Error('The wallet must be connected to ton center to quote transfer operations.')
     }
 
     const message = await this._getTokenTransferMessage(options)
@@ -250,9 +228,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
       limit: 1
     })
 
-    const response = await fetch(
-      `${TON_CENTER_V3_URL}/transactionsByMessage?${query.toString()}`
-    )
+    const response = await fetch(`${TON_CENTER_V3_URL}/transactionsByMessage?${query.toString()}`)
 
     const { transactions } = await response.json()
 
