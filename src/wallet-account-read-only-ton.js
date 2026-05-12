@@ -122,6 +122,14 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
         ? tonClient
         : new TonClient({ endpoint: tonClient.url, apiKey: tonClient.secretKey })
     }
+
+    /**
+     * The v5r1 wallet's contract.
+     *
+     * @protected
+     * @type {OpenedContract<WalletContractV5R1> | undefined}
+     */
+    this._contract = this._tonClient?.open(this._wallet)
   }
 
   /**
@@ -304,16 +312,6 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
   }
 
   /**
-   * The v5r1 wallet's contract.
-   *
-   * @protected
-   * @type {OpenedContract<WalletContractV5R1> | undefined}
-   */
-  get _contract () {
-    return this._tonClient?.open(this._wallet)
-  }
-
-  /**
    * Returns the jetton wallet address of the given jetton.
    *
    * @protected
@@ -325,16 +323,10 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
 
     const address = this._wallet.address
 
-    const { stack } = await this._tonClient.callGetMethod(
-      tokenAddress,
-      'get_wallet_address',
-      [
-        {
-          type: 'slice',
-          cell: beginCell().storeAddress(address).endCell()
-        }
-      ]
-    )
+    const { stack } = await this._tonClient.callGetMethod(tokenAddress, 'get_wallet_address', [{
+      type: 'slice',
+      cell: beginCell().storeAddress(address).endCell()
+    }])
 
     const jettonWalletAddress = stack.readAddress()
 
@@ -432,14 +424,11 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
 
     const { code, data } = await this._tonClient.getContractState(address)
 
-    const { source_fees } = await this._tonClient.estimateExternalMessageFee(
-      address,
-      {
-        body: transfer,
-        initCode: !code ? this._wallet.init.code : null,
-        initData: !data ? this._wallet.init.data : null
-      }
-    )
+    const { source_fees } = await this._tonClient.estimateExternalMessageFee(address, {
+      body: transfer,
+      initCode: !code ? this._wallet.init.code : null,
+      initData: !data ? this._wallet.init.data : null
+    })
 
     const { in_fwd_fee, storage_fee, gas_fee, fwd_fee } = source_fees
 
