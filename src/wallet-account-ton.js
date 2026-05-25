@@ -137,10 +137,10 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
   }
 
   /**
-   * Signs a transaction without broadcasting.
+   * Signs a transaction.
    *
    * @param {TonTransaction} tx - The transaction to sign.
-   * @returns {Promise<Cell>} The signed external-message body as a TON Cell. Call `cell.toBoc().toString('base64')` to obtain a wire-format payload ready for broadcast.
+   * @returns {Promise<Cell>} The signed external-message body as a TON Cell.
    */
   async signTransaction (tx) {
     if (!this._tonClient) {
