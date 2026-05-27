@@ -86,7 +86,7 @@ describe('@wdk/wallet-ton', () => {
 
     tonClient = new FakeTonClient(blockchain)
     wallet = new WalletManagerTon(SEED_PHRASE, { tonClient })
-    
+
     for (const { index, address } of [ACCOUNT_0, ACCOUNT_1]) {
       const account = new WalletAccountTon(SEED_PHRASE, `${index}'`)
       await sendTonsTo(address, INITIAL_BALANCE, { init: account._wallet.init })
@@ -195,7 +195,7 @@ describe('@wdk/wallet-ton', () => {
     expect(quoteFee).toBe(ACTIVE_ACCOUNT_FEE)
 
     expect(fee).toBe(quoteFee)
-    
+
     expect(hash).toBe('1709a81900680ad42b9d97b5c3b3dbda78dc794ec8e87ab727bc04c8e3075f36')
   })
 
@@ -261,7 +261,7 @@ describe('@wdk/wallet-ton', () => {
     }
 
     for (const account of [account0, account1]) {
-      expect(account.keyPair.privateKey).toBe(undefined)
+      expect(account.keyPair.privateKey).toBe(null)
 
       await expect(account.sign(MESSAGE)).rejects.toThrow('bad secret key size')
       await expect(account.sendTransaction(TRANSACTION)).rejects.toThrow('bad secret key size')
