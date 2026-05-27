@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/wdk-wallet-ton",
-  "version": "1.0.0-beta.8",
+  "version": "1.0.0-beta.9",
   "description": "A simple package to manage BIP-32 wallets for the ton blockchain.",
   "keywords": [
     "wdk",
@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@tetherto/wdk-failover-provider": "1.0.0-beta.2",
-    "@tetherto/wdk-wallet": "1.0.0-beta.8",
+    "@tetherto/wdk-wallet": "1.0.0-beta.9",
     "@ton/crypto": "3.3.0",
     "@ton/ton": "16.2.4",
     "bare-node-runtime": "^1.1.4",
@@ -47,7 +47,7 @@
     "typescript": "5.8.3"
   },
   "overrides": {
-    "axios": "1.12.2"
+    "axios": "1.15.2"
   },
   "exports": {
     ".": {
