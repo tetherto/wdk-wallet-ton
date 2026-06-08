@@ -3,16 +3,16 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      * Creates a new ton read-only wallet account.
      *
      * @param {string | Uint8Array} publicKey - The account's public key.
-     * @param {Omit<TonWalletConfig, 'transferMaxFee'>} [config] - The configuration object.
+     * @param {Omit<TonWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>} [config] - The configuration object.
      */
-    constructor(publicKey: string | Uint8Array, config?: Omit<TonWalletConfig, "transferMaxFee">);
+    constructor(publicKey: string | Uint8Array, config?: Omit<TonWalletConfig, "transferMaxFee" | "transactionMaxFee">);
     /**
      * The read-only wallet account configuration.
      *
      * @protected
-     * @type {Omit<TonWalletConfig, 'transferMaxFee'>}
+     * @type {Omit<TonWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>}
      */
-    protected _config: Omit<TonWalletConfig, "transferMaxFee">;
+    protected _config: Omit<TonWalletConfig, "transferMaxFee" | "transactionMaxFee">;
     /**
      * The v5r1 wallet.
      *
@@ -180,6 +180,10 @@ export type TonWalletConfig = {
      * - The maximum fee amount for transfer operations.
      */
     transferMaxFee?: number | bigint;
+    /**
+     * - The maximum fee amount for sendTransaction and signTransaction operations.
+     */
+    transactionMaxFee?: number | bigint;
 };
 import { WalletAccountReadOnly } from '@tetherto/wdk-wallet';
 import { Address, Cell, TonClient, WalletContractV5R1 } from '@ton/ton';

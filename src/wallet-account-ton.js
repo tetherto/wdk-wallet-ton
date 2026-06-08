@@ -152,8 +152,17 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
     }
 
     const message = await this._getTransactionMessage(tx)
+    const transfer = await this._getTransfer(message)
 
-    return await this._getTransfer(message)
+    // eslint-disable-next-line eqeqeq
+    if (this._config.transactionMaxFee != undefined) {
+      const fee = await this._getTransferFee(transfer)
+      if (fee >= this._config.transactionMaxFee) {
+        throw new Error('Exceeded maximum fee cost for transaction operation.')
+      }
+    }
+
+    return transfer
   }
 
   /**
@@ -170,6 +179,11 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
     const message = await this._getTransactionMessage(tx)
     const transfer = await this._getTransfer(message)
     const fee = await this._getTransferFee(transfer)
+
+    // eslint-disable-next-line eqeqeq
+    if (this._config.transactionMaxFee != undefined && fee >= this._config.transactionMaxFee) {
+      throw new Error('Exceeded maximum fee cost for transaction operation.')
+    }
 
     await this._contract.send(transfer)
 

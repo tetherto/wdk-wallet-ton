@@ -212,6 +212,21 @@ describe('WalletAccountTon', () => {
       expect(result3.hash).toBe('02540de8ae0b1e499a46b7c5ec733bedcacaa2bf426570d29c4ae25a14eca588')
     })
 
+    test('should throw if transaction fee exceeds the transaction max fee configuration', async () => {
+      const TRANSACTION = {
+        to: RECIPIENT.address,
+        value: 1_000_000
+      }
+
+      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0", {
+        tonClient,
+        transactionMaxFee: 0
+      })
+
+      await expect(account.sendTransaction(TRANSACTION))
+        .rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
+    })
+
     test('should throw if the account is not connected to the ton center', async () => {
       const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0")
 
@@ -235,6 +250,21 @@ describe('WalletAccountTon', () => {
         from: account._wallet.address,
         to: recipient._wallet.address
       })
+    })
+
+    test('should throw if transaction fee exceeds the transaction max fee configuration', async () => {
+      const TRANSACTION = {
+        to: RECIPIENT.address,
+        value: 1_000_000
+      }
+
+      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0", {
+        tonClient,
+        transactionMaxFee: 0
+      })
+
+      await expect(account.signTransaction(TRANSACTION))
+        .rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
     })
 
     test('should throw if the account is not connected to the ton center', async () => {
