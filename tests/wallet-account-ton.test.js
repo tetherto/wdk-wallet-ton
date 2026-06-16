@@ -227,6 +227,38 @@ describe('WalletAccountTon', () => {
         .rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
     })
 
+    test('should allow a fee exactly equal to transactionMaxFee', async () => {
+      const TRANSACTION = {
+        to: RECIPIENT.address,
+        value: 1_000_000
+      }
+
+      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0", {
+        tonClient,
+        transactionMaxFee: ACTIVE_ACCOUNT_FEE
+      })
+
+      const result = await account.sendTransaction(TRANSACTION)
+
+      expect(result).toHaveProperty('hash')
+    })
+
+    test('should allow a fee below transactionMaxFee', async () => {
+      const TRANSACTION = {
+        to: RECIPIENT.address,
+        value: 1_000_000
+      }
+
+      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0", {
+        tonClient,
+        transactionMaxFee: ACTIVE_ACCOUNT_FEE + 1n
+      })
+
+      const result = await account.sendTransaction(TRANSACTION)
+
+      expect(result).toHaveProperty('hash')
+    })
+
     test('should throw if the account is not connected to the ton center', async () => {
       const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0")
 
@@ -265,6 +297,38 @@ describe('WalletAccountTon', () => {
 
       await expect(account.signTransaction(TRANSACTION))
         .rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
+    })
+
+    test('should allow a fee exactly equal to transactionMaxFee', async () => {
+      const TRANSACTION = {
+        to: RECIPIENT.address,
+        value: 1_000_000
+      }
+
+      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0", {
+        tonClient,
+        transactionMaxFee: ACTIVE_ACCOUNT_FEE
+      })
+
+      const signedTransfer = await account.signTransaction(TRANSACTION)
+
+      expect(signedTransfer).toBeTruthy()
+    })
+
+    test('should allow a fee below transactionMaxFee', async () => {
+      const TRANSACTION = {
+        to: RECIPIENT.address,
+        value: 1_000_000
+      }
+
+      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0", {
+        tonClient,
+        transactionMaxFee: ACTIVE_ACCOUNT_FEE + 1n
+      })
+
+      const signedTransfer = await account.signTransaction(TRANSACTION)
+
+      expect(signedTransfer).toBeTruthy()
     })
 
     test('should throw if the account is not connected to the ton center', async () => {

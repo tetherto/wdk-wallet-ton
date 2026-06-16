@@ -157,7 +157,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
     // eslint-disable-next-line eqeqeq
     if (this._config.transactionMaxFee != undefined) {
       const fee = await this._getTransferFee(transfer)
-      if (fee >= this._config.transactionMaxFee) {
+      if (fee > this._config.transactionMaxFee) {
         throw new Error('Exceeded maximum fee cost for transaction operation.')
       }
     }
@@ -181,7 +181,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
     const fee = await this._getTransferFee(transfer)
 
     // eslint-disable-next-line eqeqeq
-    if (this._config.transactionMaxFee != undefined && fee >= this._config.transactionMaxFee) {
+    if (this._config.transactionMaxFee != undefined && fee > this._config.transactionMaxFee) {
       throw new Error('Exceeded maximum fee cost for transaction operation.')
     }
 
@@ -210,7 +210,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
     const fee = await this._getTransferFee(transfer)
 
     // eslint-disable-next-line eqeqeq
-    if (this._config.transferMaxFee != undefined && fee >= this._config.transferMaxFee) {
+    if (this._config.transferMaxFee != undefined && fee > this._config.transferMaxFee) {
       throw new Error('Exceeded maximum fee cost for transfer operations.')
     }
 
