@@ -145,6 +145,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
    *
    * @param {TonTransaction} tx - The transaction to sign.
    * @returns {Promise<Cell>} The signed external-message body as a TON Cell.
+   * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
    */
   async signTransaction (tx) {
     if (!this._tonClient) {
@@ -170,6 +171,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
    *
    * @param {TonTransaction} tx - The transaction.
    * @returns {Promise<TransactionResult>} The transaction's result.
+   * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
    */
   async sendTransaction (tx) {
     if (!this._tonClient) {
@@ -198,6 +200,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
    *
    * @param {TransferOptions} options - The transfer's options.
    * @returns {Promise<TransferResult>} The transfer's result.
+   * @throws {Error} If the transfer's cost exceeds the maximum transfer fee option.
    */
 
   async transfer (options) {
