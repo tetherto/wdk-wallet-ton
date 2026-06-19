@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@tetherto/wdk-failover-provider": "1.0.0-beta.2",
-    "@tetherto/wdk-wallet": "1.0.0-beta.9",
+    "@tetherto/wdk-wallet": "1.0.0-beta.10",
     "@ton/crypto": "3.3.0",
     "@ton/ton": "16.2.4",
     "bare-node-runtime": "^1.1.4",

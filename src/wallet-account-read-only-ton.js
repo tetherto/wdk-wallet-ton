@@ -52,6 +52,7 @@ import { signVerify } from '@ton/crypto'
  * @property {TonClientConfig | TonClient | Array<TonClientConfig | TonClient>} [tonClient] - The ton configuration or ton client {@link TonClient}. It's also possible to provide an array of configs or clients instead. In such case, connection errors will cause the wallet to automatically fallback on the next client in the list.
  * @property {number} [retries] - If set and if 'tonClient' is a list of ton configs or ton clients, the number of additional retry attempts after the initial call fails. Total attempts = `1 + retries`. For example, `retries: 3` with 4 clients will try each client once before throwing. If `retries` exceeds the number of clients, the failover will loop back and retry already-failed clients in round-robin order. Default: 3.
  * @property {number | bigint} [transferMaxFee] - The maximum fee amount for transfer operations.
+ * @property {number | bigint} [transactionMaxFee] - The maximum fee amount for sendTransaction and signTransaction operations.
  */
 
 const DUMMY_MESSAGE_VALUE = toNano(0.05)
@@ -65,7 +66,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    * Creates a new ton read-only wallet account.
    *
    * @param {string | Uint8Array} publicKey - The account's public key.
-   * @param {Omit<TonWalletConfig, 'transferMaxFee'>} [config] - The configuration object.
+   * @param {Omit<TonWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>} [config] - The configuration object.
    */
   constructor (publicKey, config = { }) {
     if (typeof publicKey === 'string') {
@@ -82,7 +83,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      * The read-only wallet account configuration.
      *
      * @protected
-     * @type {Omit<TonWalletConfig, 'transferMaxFee'>}
+     * @type {Omit<TonWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>}
      */
     this._config = config
 
