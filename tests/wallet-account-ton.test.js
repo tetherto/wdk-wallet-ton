@@ -174,6 +174,46 @@ describe('WalletAccountTon', () => {
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
     })
 
+    test('should broadcast an already-signed transfer cell', async () => {
+      const TRANSACTION = {
+        to: RECIPIENT.address,
+        value: 1_000_000
+      }
+
+      const signedTransfer = await account.signTransaction(TRANSACTION)
+
+      const { hash, fee } = await account.sendTransaction(signedTransfer)
+
+      expect(blockchain.transactions).toHaveTransaction({
+        from: account._wallet.address,
+        to: recipient._wallet.address,
+        value: 1_000_000n,
+        success: true
+      })
+
+      expect(hash).toBe('fee3cb87605424ffa9fd23da23b10ab71856371286d2b92481eb6f5e52c408d0')
+
+      expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
+    })
+
+    test('should quote an already-signed transfer cell without broadcasting', async () => {
+      const TRANSACTION = {
+        to: RECIPIENT.address,
+        value: 1_000_000
+      }
+
+      const signedTransfer = await account.signTransaction(TRANSACTION)
+
+      const { fee } = await account.quoteSendTransaction(signedTransfer)
+
+      expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
+
+      expect(blockchain.transactions).not.toHaveTransaction({
+        from: account._wallet.address,
+        to: recipient._wallet.address
+      })
+    })
+
     test('should successfully send a transaction that overrides bounceability', async () => {
       const TRANSACTION = {
         to: RECIPIENT.address,

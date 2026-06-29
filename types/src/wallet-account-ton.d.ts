@@ -59,11 +59,11 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon implement
     /**
      * Sends a transaction.
      *
-     * @param {TonTransaction} tx - The transaction.
+     * @param {TonTransaction | Cell} tx - The transaction, or a signed transfer as a TON Cell.
      * @returns {Promise<TransactionResult>} The transaction's result.
      * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
      */
-    sendTransaction(tx: TonTransaction): Promise<TransactionResult>;
+    sendTransaction(tx: TonTransaction | Cell): Promise<TransactionResult>;
     /**
      * Transfers a token to another address.
      *
