@@ -15,7 +15,7 @@
 
 import { sign } from '@ton/crypto'
 
-import { SendMode } from '@ton/ton'
+import { Cell, SendMode } from '@ton/ton'
 
 import nacl from 'tweetnacl'
 import HDKey from 'micro-key-producer/slip10.js'
@@ -29,7 +29,6 @@ import WalletAccountReadOnlyTon from './wallet-account-read-only-ton.js'
 
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
 /** @typedef {import('@ton/ton').Transaction} TonTransactionReceipt */
-/** @typedef {import('@ton/core').Cell} Cell */
 
 /** @typedef {import('@tetherto/wdk-wallet').IWalletAccount} IWalletAccount */
 
@@ -169,7 +168,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
   /**
    * Sends a transaction.
    *
-   * @param {TonTransaction} tx - The transaction.
+   * @param {TonTransaction | Cell} tx - The transaction, or a signed transfer as a TON Cell.
    * @returns {Promise<TransactionResult>} The transaction's result.
    * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
    */
@@ -178,8 +177,10 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
       throw new Error('The wallet must be connected to ton center to send transactions.')
     }
 
-    const message = await this._getTransactionMessage(tx)
-    const transfer = await this._getTransfer(message)
+    const transfer = tx instanceof Cell
+      ? tx
+      : await this._getTransfer(await this._getTransactionMessage(tx))
+
     const fee = await this._getTransferFee(transfer)
 
     // eslint-disable-next-line eqeqeq
