@@ -1,5 +1,5 @@
 /** @implements {IWalletAccount} */
-export default class WalletAccountTon extends WalletAccountReadOnlyTon implements IWalletAccount {
+export default class WalletAccountTon extends WalletAccountReadOnlyTon implements IWalletAccount<Cell> {
     /**
      * Creates a new ton wallet account.
      *
@@ -56,6 +56,13 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon implement
      * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
      */
     signTransaction(tx: TonTransaction): Promise<Cell>;
+    /**
+     * Quotes the costs of a send transaction operation.
+     *
+     * @param {TonTransaction | Cell} tx - The transaction, or a signed transfer as a TON Cell.
+     * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
+     */
+    quoteSendTransaction(tx: TonTransaction | Cell): Promise<Omit<TransactionResult, "hash">>;
     /**
      * Sends a transaction.
      *

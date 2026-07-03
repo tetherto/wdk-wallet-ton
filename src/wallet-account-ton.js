@@ -53,7 +53,7 @@ function derivePath (seed, path) {
   return keyPair
 }
 
-/** @implements {IWalletAccount} */
+/** @implements {IWalletAccount<Cell>} */
 export default class WalletAccountTon extends WalletAccountReadOnlyTon {
   /**
    * Creates a new ton wallet account.
@@ -163,6 +163,26 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
     }
 
     return transfer
+  }
+
+  /**
+   * Quotes the costs of a send transaction operation.
+   *
+   * @param {TonTransaction | Cell} tx - The transaction, or a signed transfer as a TON Cell.
+   * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
+   */
+  async quoteSendTransaction (tx) {
+    if (tx instanceof Cell) {
+      if (!this._tonClient) {
+        throw new Error('The wallet must be connected to ton center to quote send transaction operations.')
+      }
+
+      const fee = await this._getTransferFee(tx)
+
+      return { fee }
+    }
+
+    return await super.quoteSendTransaction(tx)
   }
 
   /**

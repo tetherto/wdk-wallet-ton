@@ -58,10 +58,10 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
     /**
      * Quotes the costs of a send transaction operation.
      *
-     * @param {TonTransaction | Cell} tx - The transaction, or a signed transfer as a TON Cell.
+     * @param {TonTransaction} tx - The transaction.
      * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
      */
-    quoteSendTransaction(tx: TonTransaction | Cell): Promise<Omit<TransactionResult, "hash">>;
+    quoteSendTransaction(tx: TonTransaction): Promise<Omit<TransactionResult, "hash">>;
     /**
      * Quotes the costs of a transfer operation.
      *

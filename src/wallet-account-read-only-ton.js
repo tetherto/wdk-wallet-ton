@@ -17,10 +17,11 @@ import { WalletAccountReadOnly } from '@tetherto/wdk-wallet'
 
 import FailoverProvider from '@tetherto/wdk-failover-provider'
 
-import { Address, beginCell, Cell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
+import { Address, beginCell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
 
 import { signVerify } from '@ton/crypto'
 
+/** @typedef {import('@ton/ton').Cell} Cell */
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
 /** @typedef {import('@ton/ton').Transaction} TonTransactionReceipt */
 /**
@@ -182,18 +183,12 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
   /**
    * Quotes the costs of a send transaction operation.
    *
-   * @param {TonTransaction | Cell} tx - The transaction, or a signed transfer as a TON Cell.
+   * @param {TonTransaction} tx - The transaction.
    * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
    */
   async quoteSendTransaction (tx) {
     if (!this._tonClient) {
       throw new Error('The wallet must be connected to ton center to quote send transaction operations.')
-    }
-
-    if (tx instanceof Cell) {
-      const fee = await this._getTransferFee(tx)
-
-      return { fee }
     }
 
     const message = await this._getTransactionMessage(tx)
