@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals'
 
-import { Address, beginCell, SendMode } from '@ton/ton'
+import { Address, beginCell, fromNano, internal, SendMode } from '@ton/ton'
 import { JettonMinter } from '@ton-community/assets-sdk'
 
 import * as bip39 from 'bip39'
@@ -22,6 +22,28 @@ function restoreMathRandom () {
 const originalDateNow = Date.now
 function restoreDateNow () {
   global.Date.now = originalDateNow
+}
+
+// Manually builds a signed v5r1 transfer cell using the TON SDK directly,
+// without relying on the account's `signTransaction` method.
+async function buildSignedTransferCell (account, { to, value }) {
+  const { isBounceable } = Address.parseFriendly(to)
+
+  const message = internal({
+    to,
+    value: fromNano(value),
+    bounce: isBounceable,
+    body: ''
+  })
+
+  const seqno = await account._contract.getSeqno()
+
+  return account._contract.createTransfer({
+    secretKey: account._keyPair.secretKey,
+    sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+    messages: [message],
+    seqno
+  })
 }
 
 const { WalletAccountReadOnlyTon, WalletAccountTon } = await import('../index.js')
@@ -175,12 +197,10 @@ describe('WalletAccountTon', () => {
     })
 
     test('should broadcast an already-signed transfer cell', async () => {
-      const TRANSACTION = {
+      const signedTransfer = await buildSignedTransferCell(account, {
         to: RECIPIENT.address,
         value: 1_000_000
-      }
-
-      const signedTransfer = await account.signTransaction(TRANSACTION)
+      })
 
       const { hash, fee } = await account.sendTransaction(signedTransfer)
 
@@ -194,24 +214,6 @@ describe('WalletAccountTon', () => {
       expect(hash).toBe('fee3cb87605424ffa9fd23da23b10ab71856371286d2b92481eb6f5e52c408d0')
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
-    })
-
-    test('should quote an already-signed transfer cell without broadcasting', async () => {
-      const TRANSACTION = {
-        to: RECIPIENT.address,
-        value: 1_000_000
-      }
-
-      const signedTransfer = await account.signTransaction(TRANSACTION)
-
-      const { fee } = await account.quoteSendTransaction(signedTransfer)
-
-      expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
-
-      expect(blockchain.transactions).not.toHaveTransaction({
-        from: account._wallet.address,
-        to: recipient._wallet.address
-      })
     })
 
     test('should successfully send a transaction that overrides bounceability', async () => {
@@ -304,6 +306,24 @@ describe('WalletAccountTon', () => {
 
       await expect(account.sendTransaction({ }))
         .rejects.toThrow('The wallet must be connected to ton center to send transactions.')
+    })
+  })
+
+  describe('quoteSendTransaction', () => {
+    test('should quote an already-signed transfer cell without broadcasting', async () => {
+      const signedTransfer = await buildSignedTransferCell(account, {
+        to: RECIPIENT.address,
+        value: 1_000_000
+      })
+
+      const { fee } = await account.quoteSendTransaction(signedTransfer)
+
+      expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
+
+      expect(blockchain.transactions).not.toHaveTransaction({
+        from: account._wallet.address,
+        to: recipient._wallet.address
+      })
     })
   })
 
