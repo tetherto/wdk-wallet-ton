@@ -196,7 +196,7 @@ describe('WalletAccountTon', () => {
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
     })
 
-    test('should broadcast an already-signed transfer cell', async () => {
+    test('should broadcast an already-signed transaction', async () => {
       const signedTransfer = await buildSignedTransferCell(account, {
         to: RECIPIENT.address,
         value: 1_000_000
@@ -310,7 +310,7 @@ describe('WalletAccountTon', () => {
   })
 
   describe('quoteSendTransaction', () => {
-    test('should quote an already-signed transfer cell without broadcasting', async () => {
+    test('should quote an already-signed transaction without broadcasting', async () => {
       const signedTransfer = await buildSignedTransferCell(account, {
         to: RECIPIENT.address,
         value: 1_000_000
