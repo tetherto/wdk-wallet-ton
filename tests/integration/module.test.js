@@ -122,6 +122,48 @@ describe('@wdk/wallet-ton', () => {
     expect(fee).toBe(quoteFee)
   })
 
+  test('should sign a transaction and broadcast the resulting transfer cell', async () => {
+    const account0 = await wallet.getAccount()
+
+    const TRANSACTION = {
+      to: ACCOUNT_1.address,
+      value: 1_000_000n
+    }
+
+    const signedTransfer = await account0.signTransaction(TRANSACTION)
+
+    const { fee } = await account0.sendTransaction(signedTransfer)
+
+    expect(blockchain.transactions).toHaveTransaction({
+      from: Address.parse(ACCOUNT_0.address),
+      to: Address.parse(ACCOUNT_1.address),
+      value: 1_000_000n,
+      success: true
+    })
+
+    expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
+  })
+
+  test('should sign a transaction and quote the resulting transfer cell without broadcasting', async () => {
+    const account0 = await wallet.getAccount()
+
+    const TRANSACTION = {
+      to: ACCOUNT_1.address,
+      value: 1_000_000n
+    }
+
+    const signedTransfer = await account0.signTransaction(TRANSACTION)
+
+    const { fee } = await account0.quoteSendTransaction(signedTransfer)
+
+    expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
+
+    expect(blockchain.transactions).not.toHaveTransaction({
+      from: Address.parse(ACCOUNT_0.address),
+      to: Address.parse(ACCOUNT_1.address)
+    })
+  })
+
   test('should derive two accounts, send a tx from account 0 to 1 and get the correct balances', async () => {
     const account0 = await wallet.getAccount()
     const account1 = await wallet.getAccount(1)

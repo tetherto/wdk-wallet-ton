@@ -1,5 +1,5 @@
 /** @implements {IWalletAccount} */
-export default class WalletAccountTon extends WalletAccountReadOnlyTon implements IWalletAccount {
+export default class WalletAccountTon extends WalletAccountReadOnlyTon implements IWalletAccount<Cell> {
     /**
      * Creates a new ton wallet account.
      *
@@ -57,13 +57,20 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon implement
      */
     signTransaction(tx: TonTransaction): Promise<Cell>;
     /**
+     * Quotes the costs of a send transaction operation.
+     *
+     * @param {TonTransaction | Cell} tx - The transaction, or a signed transfer as a TON Cell.
+     * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
+     */
+    quoteSendTransaction(tx: TonTransaction | Cell): Promise<Omit<TransactionResult, "hash">>;
+    /**
      * Sends a transaction.
      *
-     * @param {TonTransaction} tx - The transaction.
+     * @param {TonTransaction | Cell} tx - The transaction, or a signed transfer as a TON Cell.
      * @returns {Promise<TransactionResult>} The transaction's result.
      * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
      */
-    sendTransaction(tx: TonTransaction): Promise<TransactionResult>;
+    sendTransaction(tx: TonTransaction | Cell): Promise<TransactionResult>;
     /**
      * Transfers a token to another address.
      *
@@ -86,7 +93,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon implement
 export type MessageRelaxed = import("@ton/ton").MessageRelaxed;
 export type TonTransactionReceipt = import("@ton/ton").Transaction;
 export type Cell = import("@ton/core").Cell;
-export type IWalletAccount = import("@tetherto/wdk-wallet").IWalletAccount;
+export type IWalletAccount<TSignedTransaction> = import("@tetherto/wdk-wallet").IWalletAccount<TSignedTransaction>;
 export type KeyPair = import("@tetherto/wdk-wallet").KeyPair;
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
 export type TransferOptions = import("@tetherto/wdk-wallet").TransferOptions;
