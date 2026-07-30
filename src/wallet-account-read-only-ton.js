@@ -17,11 +17,10 @@ import { WalletAccountReadOnly, NoSuchElementError } from '@tetherto/wdk-wallet'
 
 import FailoverProvider from '@tetherto/wdk-failover-provider'
 
-import { Address, beginCell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
+import { Address, beginCell, Cell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
 
 import { signVerify } from '@ton/crypto'
 
-/** @typedef {import('@ton/ton').Cell} Cell */
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
 /** @typedef {import('@ton/ton').Transaction} TonTransactionReceipt */
 /**
@@ -47,7 +46,8 @@ import { signVerify } from '@ton/crypto'
  * @property {string} to - The transaction's recipient.
  * @property {number | bigint} value - The amount of tons to send to the recipient (in nanotons).
  * @property {boolean} [bounceable] - If set, overrides the bounceability of the transaction.
- * @property {string | Cell} [body] - Optional message body for smart contract interactions.
+ * @property {string | Cell} [body] - Optional message body for smart contract interactions: a cell, a base64-encoded
+ *   serialized cell (BoC), or any other string to send as a text comment.
  */
 
 /**
@@ -471,6 +471,10 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
   async _getTransactionMessage ({ to, value, bounceable, body }) {
     const { isBounceable } = Address.parseFriendly(to)
 
+    if (typeof body === 'string') {
+      body = this._parseStringBody(body)
+    }
+
     const message = internal({
       to,
       value: fromNano(value),
@@ -479,6 +483,25 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
     })
 
     return message
+  }
+
+  /**
+   * Parses a string message body: a base64-encoded serialized cell (BoC) is decoded to the cell
+   * it represents, any other string is kept as-is to be sent as a text comment.
+   *
+   * Serialized cells are unambiguous — they carry the BoC magic prefix and checksums — so a
+   * regular text comment can never be decoded as one by accident.
+   *
+   * @protected
+   * @param {string} body - The string message body.
+   * @returns {Cell | string} The decoded cell, or the original string.
+   */
+  _parseStringBody (body) {
+    try {
+      return Cell.fromBase64(body)
+    } catch {
+      return body
+    }
   }
 
   /**
