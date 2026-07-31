@@ -23,6 +23,7 @@
 /** @typedef {import('@tetherto/wdk-wallet').TransferResult} TransferResult */
 
 /** @typedef {import('./src/wallet-account-ton.js').TonTransaction} TonTransaction */
+/** @typedef {import('./src/wallet-account-read-only-ton.js').TonTransactionInfo} TonTransactionInfo */
 /** @typedef {import('./src/wallet-account-ton.js').TonClientConfig} TonClientConfig */
 /** @typedef {import('./src/wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
 

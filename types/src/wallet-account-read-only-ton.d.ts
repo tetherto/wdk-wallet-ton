@@ -72,10 +72,30 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
     /**
      * Returns a transaction's receipt.
      *
+     * @deprecated Use {@link getTransaction} instead, which returns a normalized, finality-based receipt. The raw ton transaction remains available on its `transaction` property.
      * @param {string} hash - The transaction's hash.
      * @returns {Promise<TonTransactionReceipt | null>} - The receipt, or null if the transaction has not been included in a block yet.
      */
     getTransactionReceipt(hash: string): Promise<TonTransactionReceipt | null>;
+    /**
+     * Returns a normalized, finality-based receipt for a transaction.
+     *
+     * @param {string} hash - The transaction's message body hash.
+     * @returns {Promise<TonTransactionInfo | null>} The normalized receipt, or null if the transaction is not known.
+     */
+    getTransaction(hash: string): Promise<TonTransactionInfo | null>;
+    /**
+     * Returns whether a committed transaction executed successfully, or null when the execution result can't be determined.
+     *
+     * @protected
+     * @param {TonTransactionReceipt} [transaction] - The native ton transaction.
+     * @returns {boolean | null} The execution result.
+     */
+    protected _isTransactionSuccessful(transaction?: TonTransactionReceipt): boolean | null;
+    /** @protected @type {number} */
+    protected get _defaultWaitInterval(): number;
+    /** @protected @type {number} */
+    protected get _defaultWaitTimeout(): number;
     /**
      * Creates a TON client whose internal API calls fail over across configured clients.
      *
@@ -139,6 +159,13 @@ export type TonTransactionReceipt = import("@ton/ton").Transaction;
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
 export type TransferOptions = import("@tetherto/wdk-wallet").TransferOptions;
 export type TransferResult = import("@tetherto/wdk-wallet").TransferResult;
+export type TransactionReceipt = import("@tetherto/wdk-wallet").TransactionReceipt;
+/**
+ * A normalized TON transaction receipt, extended with the native ton transaction.
+ */
+export type TonTransactionInfo = TransactionReceipt & {
+    transaction: TonTransactionReceipt | null;
+};
 export type TonTransaction = {
     /**
      * - The transaction's recipient.

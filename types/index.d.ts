@@ -8,5 +8,6 @@ export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult
 export type TransferOptions = import("@tetherto/wdk-wallet").TransferOptions;
 export type TransferResult = import("@tetherto/wdk-wallet").TransferResult;
 export type TonTransaction = import("./src/wallet-account-ton.js").TonTransaction;
+export type TonTransactionInfo = import("./src/wallet-account-read-only-ton.js").TonTransactionInfo;
 export type TonClientConfig = import("./src/wallet-account-ton.js").TonClientConfig;
 export type TonWalletConfig = import("./src/wallet-account-ton.js").TonWalletConfig;

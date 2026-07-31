@@ -32,6 +32,15 @@ import { signVerify } from '@ton/crypto'
 /** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
 /** @typedef {import('@tetherto/wdk-wallet').TransferOptions} TransferOptions */
 /** @typedef {import('@tetherto/wdk-wallet').TransferResult} TransferResult */
+/** @typedef {import('@tetherto/wdk-wallet').TransactionReceipt} TransactionReceipt */
+
+/**
+ * A normalized TON transaction receipt, extended with the native ton transaction.
+ *
+ * @typedef {TransactionReceipt & {
+ *   transaction: TonTransactionReceipt | null
+ * }} TonTransactionInfo
+ */
 
 /**
  * @typedef {Object} TonTransaction
@@ -220,6 +229,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
   /**
    * Returns a transaction's receipt.
    *
+   * @deprecated Use {@link getTransaction} instead, which returns a normalized, finality-based receipt. The raw ton transaction remains available on its `transaction` property.
    * @param {string} hash - The transaction's hash.
    * @returns {Promise<TonTransactionReceipt | null>} - The receipt, or null if the transaction has not been included in a block yet.
    */
@@ -256,6 +266,93 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
       })
       return transaction
     }
+  }
+
+  /**
+   * Returns a normalized, finality-based receipt for a transaction.
+   *
+   * @param {string} hash - The transaction's message body hash.
+   * @returns {Promise<TonTransactionInfo | null>} The normalized receipt, or null if the transaction is not known.
+   */
+  async getTransaction (hash) {
+    const query = new URLSearchParams({
+      body_hash: hash,
+      limit: 1
+    })
+
+    const response = await fetch(`${TON_CENTER_V3_URL}/transactionsByMessage?${query.toString()}`)
+
+    const { transactions } = await response.json()
+
+    if (!transactions || transactions.length === 0) {
+      return null
+    }
+
+    const receipt = transactions[0]
+    const rawAddress = receipt.account
+
+    let transaction
+    try {
+      [transaction] = await this._tonClient.getTransactions(rawAddress, {
+        limit: 1,
+        hash: receipt.hash
+      })
+    } catch (error) {
+      [transaction] = await this._tonClient.getTransactions(rawAddress, {
+        limit: 1,
+        lt: receipt.lt,
+        hash: receipt.hash,
+        archival: true
+      })
+    }
+
+    return {
+      id: hash,
+      finality: receipt.mc_block_seqno != null ? 'final' : 'confirmed',
+      success: this._isTransactionSuccessful(transaction),
+      blockRef: receipt.mc_block_seqno ?? undefined,
+      fee: transaction?.totalFees?.coins,
+      transaction: transaction ?? null
+    }
+  }
+
+  /**
+   * Returns whether a committed transaction executed successfully, or null when the execution result can't be determined.
+   *
+   * @protected
+   * @param {TonTransactionReceipt} [transaction] - The native ton transaction.
+   * @returns {boolean | null} The execution result.
+   */
+  _isTransactionSuccessful (transaction) {
+    const description = transaction?.description
+
+    if (!description || description.type !== 'generic') {
+      return null
+    }
+
+    if (description.aborted) {
+      return false
+    }
+
+    if (description.computePhase?.type === 'vm' && !description.computePhase.success) {
+      return false
+    }
+
+    if (description.actionPhase && !description.actionPhase.success) {
+      return false
+    }
+
+    return true
+  }
+
+  /** @protected @type {number} */
+  get _defaultWaitInterval () {
+    return 3000
+  }
+
+  /** @protected @type {number} */
+  get _defaultWaitTimeout () {
+    return 60000
   }
 
   /**
