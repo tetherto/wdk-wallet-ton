@@ -234,14 +234,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    * @returns {Promise<TonTransactionReceipt | null>} - The receipt, or null if the transaction has not been included in a block yet.
    */
   async getTransactionReceipt (hash) {
-    const query = new URLSearchParams({
-      body_hash: hash,
-      limit: 1
-    })
-
-    const response = await fetch(`${TON_CENTER_V3_URL}/transactionsByMessage?${query.toString()}`)
-
-    const { transactions } = await response.json()
+    const { transactions } = await this._fetchTransactionsByMessage(hash)
 
     if (!transactions || transactions.length === 0) {
       return null
@@ -275,14 +268,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    * @returns {Promise<TonTransactionInfo | null>} The normalized receipt, or null if the transaction is not known.
    */
   async getTransaction (hash) {
-    const query = new URLSearchParams({
-      body_hash: hash,
-      limit: 1
-    })
-
-    const response = await fetch(`${TON_CENTER_V3_URL}/transactionsByMessage?${query.toString()}`)
-
-    const { transactions } = await response.json()
+    const { transactions } = await this._fetchTransactionsByMessage(hash)
 
     if (!transactions || transactions.length === 0) {
       return null
@@ -314,6 +300,59 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
       fee: transaction?.totalFees?.coins,
       transaction: transaction ?? null
     }
+  }
+
+  /**
+   * Fetches the TON Center v3 transactions matching the given message body hash.
+   *
+   * @protected
+   * @param {string} hash - The message body hash.
+   * @returns {Promise<{ transactions?: Array<Object> }>} The TON Center response payload.
+   * @throws {Error} If the TON Center request returns a non-OK HTTP status.
+   */
+  async _fetchTransactionsByMessage (hash) {
+    const { baseUrl, apiKey } = this._resolveTonCenterEndpoint()
+
+    const query = new URLSearchParams({
+      body_hash: hash,
+      limit: 1
+    })
+
+    const url = `${baseUrl}/transactionsByMessage?${query.toString()}`
+
+    const response = apiKey
+      ? await fetch(url, { headers: { 'X-Api-Key': apiKey } })
+      : await fetch(url)
+
+    if (!response.ok) {
+      throw new Error(`TON Center request failed with status ${response.status}.`)
+    }
+
+    return await response.json()
+  }
+
+  /**
+   * Resolves the TON Center v3 REST base URL and api key from the configured client.
+   *
+   * @protected
+   * @returns {{ baseUrl: string, apiKey: string | undefined }} The resolved endpoint.
+   */
+  _resolveTonCenterEndpoint () {
+    const params = this._tonClient?.parameters
+    const endpoint = params?.endpoint
+    const apiKey = params?.apiKey
+
+    let baseUrl = TON_CENTER_V3_URL
+
+    if (endpoint) {
+      try {
+        baseUrl = `${new URL(endpoint).origin}/api/v3`
+      } catch {
+        baseUrl = TON_CENTER_V3_URL
+      }
+    }
+
+    return { baseUrl, apiKey }
   }
 
   /**

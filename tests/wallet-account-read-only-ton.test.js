@@ -200,6 +200,7 @@ describe('WalletAccountReadOnlyTon', () => {
       const hash = await sendTransaction('EQBP4mzpDIywL1SV-Wp9ZuBBlzprR9eXQgSYGEXiUEHm7yYF', 100_000)
 
       global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           transactions: [{
             hash: hash.toString('hex')
@@ -222,6 +223,7 @@ describe('WalletAccountReadOnlyTon', () => {
       const MESSAGE_HASH = 'e3dafa8c96cee59affae9a9ce1c1ac0661ba2b041bee6b46fd188f61ee70582a'
 
       global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           transactions: []
         })
@@ -262,6 +264,7 @@ describe('WalletAccountReadOnlyTon', () => {
 
     test('should return null if the transaction is not known', async () => {
       global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({ transactions: [] })
       })
 
@@ -276,6 +279,7 @@ describe('WalletAccountReadOnlyTon', () => {
       const hash = await sendTransaction('EQBP4mzpDIywL1SV-Wp9ZuBBlzprR9eXQgSYGEXiUEHm7yYF', 100_000)
 
       global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           transactions: [{ hash: hash.toString('hex') }]
         })
@@ -297,6 +301,7 @@ describe('WalletAccountReadOnlyTon', () => {
       const hash = await sendTransaction('EQBP4mzpDIywL1SV-Wp9ZuBBlzprR9eXQgSYGEXiUEHm7yYF', 100_000)
 
       global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           transactions: [{ hash: hash.toString('hex'), mc_block_seqno: 12345 }]
         })
@@ -307,6 +312,16 @@ describe('WalletAccountReadOnlyTon', () => {
       expect(info.finality).toBe('final')
       expect(info.blockRef).toBe(12345)
       expect(info.success).toBe(true)
+    })
+
+    test('should throw on a non-OK TON Center response instead of reporting the transaction as not found', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 429,
+        json: () => Promise.resolve({})
+      })
+
+      await expect(account.getTransaction(MESSAGE_HASH)).rejects.toThrow('TON Center request failed with status 429.')
     })
   })
 
