@@ -85,13 +85,13 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      */
     getTransaction(hash: string): Promise<TonTransactionInfo | null>;
     /**
-     * Returns whether a committed transaction executed successfully, or null when the execution result can't be determined.
+     * Returns whether a committed transaction executed successfully, or undefined when the execution result can't be determined.
      *
      * @protected
      * @param {TonTransactionReceipt} [transaction] - The native ton transaction.
-     * @returns {boolean | null} The execution result.
+     * @returns {boolean | undefined} The execution result.
      */
-    protected _isTransactionSuccessful(transaction?: TonTransactionReceipt): boolean | null;
+    protected _isTransactionSuccessful(transaction?: TonTransactionReceipt): boolean | undefined;
     /** @protected @type {number} */
     protected get _defaultWaitInterval(): number;
     /** @protected @type {number} */

@@ -296,7 +296,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
       id: hash,
       finality: receipt.mc_block_seqno != null ? 'final' : 'confirmed',
       success: this._isTransactionSuccessful(transaction),
-      blockRef: receipt.mc_block_seqno ?? undefined,
+      block: receipt.mc_block_seqno ?? undefined,
       fee: transaction?.totalFees?.coins,
       transaction: transaction ?? null
     }
@@ -356,17 +356,17 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
   }
 
   /**
-   * Returns whether a committed transaction executed successfully, or null when the execution result can't be determined.
+   * Returns whether a committed transaction executed successfully, or undefined when the execution result can't be determined.
    *
    * @protected
    * @param {TonTransactionReceipt} [transaction] - The native ton transaction.
-   * @returns {boolean | null} The execution result.
+   * @returns {boolean | undefined} The execution result.
    */
   _isTransactionSuccessful (transaction) {
     const description = transaction?.description
 
     if (!description || description.type !== 'generic') {
-      return null
+      return undefined
     }
 
     if (description.aborted) {

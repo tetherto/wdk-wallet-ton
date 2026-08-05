@@ -290,7 +290,7 @@ describe('WalletAccountReadOnlyTon', () => {
       expect(info.id).toBe(MESSAGE_HASH)
       expect(info.finality).toBe('confirmed')
       expect(info.success).toBe(true)
-      expect(info.blockRef).toBeUndefined()
+      expect(info.block).toBeUndefined()
       expect(typeof info.fee).toBe('bigint')
       expect(info.transaction.hash()).toBe(hash)
     })
@@ -310,7 +310,7 @@ describe('WalletAccountReadOnlyTon', () => {
       const info = await account.getTransaction(MESSAGE_HASH)
 
       expect(info.finality).toBe('final')
-      expect(info.blockRef).toBe(12345)
+      expect(info.block).toBe(12345)
       expect(info.success).toBe(true)
     })
 
