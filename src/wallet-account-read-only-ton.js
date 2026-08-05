@@ -293,7 +293,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
     }
 
     return {
-      id: hash,
+      hash,
       finality: receipt.mc_block_seqno != null ? 'final' : 'confirmed',
       success: this._isTransactionSuccessful(transaction),
       block: receipt.mc_block_seqno ?? undefined,
