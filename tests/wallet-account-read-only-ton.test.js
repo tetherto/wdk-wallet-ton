@@ -6,6 +6,7 @@ import BlockchainWithLogs from './blockchain-with-logs.js'
 import FakeTonClient, { ACTIVE_ACCOUNT_FEE, UNINITIALIZED_ACCOUNT_FEE } from './fake-ton-client.js'
 
 import { WalletAccountReadOnlyTon } from '../index.js'
+import { NoSuchElementError } from '@tetherto/wdk-wallet'
 
 const PUBLIC_KEY = 'f2ade24192b5a0fba669da730d105088a3a848519f43b27f24bdd8395eb26b8f'
 const PRIVATE_KEY = '904a9fec5f3e5bea8f1b4c5180828843e6acd58c198967fd56b4159b44b5a68ef2ade24192b5a0fba669da730d105088a3a848519f43b27f24bdd8395eb26b8f'
@@ -262,15 +263,13 @@ describe('WalletAccountReadOnlyTon', () => {
       return result.transactions[0].hash()
     }
 
-    test('should return null if the transaction is not known', async () => {
+    test('should throw NoSuchElementError if the transaction is not known', async () => {
       global.fetch = jest.fn().mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ transactions: [] })
       })
 
-      const info = await account.getTransaction(MESSAGE_HASH)
-
-      expect(info).toBeNull()
+      await expect(account.getTransaction(MESSAGE_HASH)).rejects.toThrow(NoSuchElementError)
     })
 
     test('should report confirmed for a committed but not-yet-referenced transaction', async () => {

@@ -13,7 +13,7 @@
 // limitations under the License.
 'use strict'
 
-import { WalletAccountReadOnly } from '@tetherto/wdk-wallet'
+import { WalletAccountReadOnly, NoSuchElementError } from '@tetherto/wdk-wallet'
 
 import FailoverProvider from '@tetherto/wdk-failover-provider'
 
@@ -265,13 +265,14 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    * Returns a normalized, finality-based receipt for a transaction.
    *
    * @param {string} hash - The transaction's message body hash.
-   * @returns {Promise<TonTransactionInfo | null>} The normalized receipt, or null if the transaction is not known.
+   * @returns {Promise<TonTransactionInfo>} The normalized receipt.
+   * @throws {NoSuchElementError} If no transaction has been found for the given hash.
    */
   async getTransaction (hash) {
     const { transactions } = await this._fetchTransactionsByMessage(hash)
 
     if (!transactions || transactions.length === 0) {
-      return null
+      throw new NoSuchElementError(`No transaction found for '${hash}'.`)
     }
 
     const receipt = transactions[0]
