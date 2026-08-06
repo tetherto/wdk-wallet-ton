@@ -385,16 +385,6 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
     return true
   }
 
-  /** @protected @type {number} */
-  get _defaultWaitInterval () {
-    return 3000
-  }
-
-  /** @protected @type {number} */
-  get _defaultWaitTimeout () {
-    return 60000
-  }
-
   /**
    * Creates a TON client whose internal API calls fail over across configured clients.
    *

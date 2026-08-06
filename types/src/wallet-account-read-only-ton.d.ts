@@ -93,10 +93,6 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      * @returns {boolean | undefined} The execution result.
      */
     protected _isTransactionSuccessful(transaction?: TonTransactionReceipt): boolean | undefined;
-    /** @protected @type {number} */
-    protected get _defaultWaitInterval(): number;
-    /** @protected @type {number} */
-    protected get _defaultWaitTimeout(): number;
     /**
      * Creates a TON client whose internal API calls fail over across configured clients.
      *
