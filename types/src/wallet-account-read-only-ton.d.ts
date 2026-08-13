@@ -1,5 +1,14 @@
 export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
     /**
+     * Creates a TON client whose internal API calls fail over across configured clients.
+     *
+     * @protected
+     * @param {Array<TonClientConfig | TonClient>} tonClients - TON client configs or clients.
+     * @param {number} retries - The number of failover retries.
+     * @returns {TonClient} The TON client with a failover API.
+     */
+    protected static _createTonClientWithFailoverApi(tonClients: Array<TonClientConfig | TonClient>, retries: number): TonClient;
+    /**
      * Creates a new ton read-only wallet account.
      *
      * @param {string | Uint8Array} publicKey - The account's public key.
@@ -35,40 +44,12 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      */
     protected _contract: OpenedContract<WalletContractV5R1> | undefined;
     /**
-     * Verifies a message's signature.
-     *
-     * @param {string} message - The original message.
-     * @param {string} signature - The signature to verify.
-     * @returns {Promise<boolean>} True if the signature is valid.
-     */
-    verify(message: string, signature: string): Promise<boolean>;
-    /**
-     * Returns the account's ton balance.
-     *
-     * @returns {Promise<bigint>} The ton balance (in nanotons).
-     */
-    getBalance(): Promise<bigint>;
-    /**
-     * Returns the balance of the account for a specific token.
-     *
-     * @param {string} tokenAddress - The smart contract address of the token.
-     * @returns {Promise<bigint>} The token balance (in base unit).
-     */
-    getTokenBalance(tokenAddress: string): Promise<bigint>;
-    /**
      * Quotes the costs of a send transaction operation.
      *
      * @param {TonTransaction} tx - The transaction.
      * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
      */
     quoteSendTransaction(tx: TonTransaction): Promise<Omit<TransactionResult, "hash">>;
-    /**
-     * Quotes the costs of a transfer operation.
-     *
-     * @param {TransferOptions} options - The transfer's options.
-     * @returns {Promise<Omit<TransferResult, 'hash'>>} The transfer's quotes.
-     */
-    quoteTransfer(options: TransferOptions): Promise<Omit<TransferResult, "hash">>;
     /**
      * Returns a transaction's receipt.
      *
@@ -81,10 +62,40 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      * Returns a normalized, finality-based receipt for a transaction.
      *
      * @param {string} hash - The transaction's message body hash.
-     * @returns {Promise<TonTransactionInfo>} The normalized receipt.
+     * @returns {Promise<TransactionReceipt & TonTransactionDetails>} The normalized receipt.
      * @throws {NoSuchElementError} If no transaction has been found for the given hash.
      */
-    getTransaction(hash: string): Promise<TonTransactionInfo>;
+    getTransaction(hash: string): Promise<TransactionReceipt & TonTransactionDetails>;
+    /**
+     * Blocks until a transaction reaches a terminal state (the requested finality target or `dropped`), or times out.
+     *
+     * @param {string} hash - The transaction's message body hash.
+     * @param {WaitForTransactionOptions} [options] - The wait options.
+     * @returns {Promise<TransactionReceipt & TonTransactionDetails>} The terminal receipt: the finality target reached (inspect `success` to tell success from revert), or `dropped`.
+     * @throws {TimeoutError} If the target is not reached before the timeout.
+     */
+    waitForTransaction(hash: string, options?: WaitForTransactionOptions): Promise<TransactionReceipt & TonTransactionDetails>;
+    /**
+     * Fetches the TON Center v3 transactions matching the given message body hash.
+     *
+     * @protected
+     * @param {string} hash - The message body hash.
+     * @returns {Promise<{ transactions?: Array<Object> }>} The TON Center response payload.
+     * @throws {Error} If the TON Center request returns a non-OK HTTP status.
+     */
+    protected _fetchTransactionsByMessage(hash: string): Promise<{
+        transactions?: Array<any>;
+    }>;
+    /**
+     * Resolves the TON Center v3 REST base URL and api key from the configured client.
+     *
+     * @protected
+     * @returns {{ baseUrl: string, apiKey: string | undefined }} The resolved endpoint.
+     */
+    protected _resolveTonCenterEndpoint(): {
+        baseUrl: string;
+        apiKey: string | undefined;
+    };
     /**
      * Returns whether a committed transaction executed successfully, or undefined when the execution result can't be determined.
      *
@@ -93,15 +104,6 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      * @returns {boolean | undefined} The execution result.
      */
     protected _isTransactionSuccessful(transaction?: TonTransactionReceipt): boolean | undefined;
-    /**
-     * Creates a TON client whose internal API calls fail over across configured clients.
-     *
-     * @protected
-     * @param {Array<TonClientConfig | TonClient>} tonClients - TON client configs or clients.
-     * @param {number} retries - The number of failover retries.
-     * @returns {TonClient} The TON client with a failover API.
-     */
-    protected static _createTonClientWithFailoverApi(tonClients: Array<TonClientConfig | TonClient>, retries: number): TonClient;
     /**
      * Returns the jetton wallet address of the given jetton.
      *
@@ -150,17 +152,22 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      */
     protected _generateQueryId(): bigint;
 }
-export type OpenedContract<F> = import("@ton/ton").OpenedContract<F>;
+export type Cell = import("@ton/ton").Cell;
 export type MessageRelaxed = import("@ton/ton").MessageRelaxed;
 export type TonTransactionReceipt = import("@ton/ton").Transaction;
+export type OpenedContract<T> = import("@ton/ton").OpenedContract<T>;
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
 export type TransferOptions = import("@tetherto/wdk-wallet").TransferOptions;
 export type TransferResult = import("@tetherto/wdk-wallet").TransferResult;
 export type TransactionReceipt = import("@tetherto/wdk-wallet").TransactionReceipt;
+export type WaitForTransactionOptions = import("@tetherto/wdk-wallet").WaitForTransactionOptions;
 /**
- * A normalized TON transaction receipt, extended with the native ton transaction.
+ * The TON-specific fields added to a normalized transaction receipt.
  */
-export type TonTransactionInfo = TransactionReceipt & {
+export type TonTransactionDetails = {
+    /**
+     * - The native ton transaction, or null while the transaction is pending or dropped.
+     */
     transaction: TonTransactionReceipt | null;
 };
 export type TonTransaction = {
@@ -177,7 +184,7 @@ export type TonTransaction = {
      */
     bounceable?: boolean;
     /**
-     * - Optional message body.
+     * - Optional message body for smart contract interactions.
      */
     body?: string | Cell;
 };
@@ -210,4 +217,6 @@ export type TonWalletConfig = {
     transactionMaxFee?: number | bigint;
 };
 import { WalletAccountReadOnly } from '@tetherto/wdk-wallet';
-import { Address, Cell, TonClient, WalletContractV5R1 } from '@ton/ton';
+import { WalletContractV5R1 } from '@ton/ton';
+import { TonClient } from '@ton/ton';
+import { Address } from '@ton/ton';

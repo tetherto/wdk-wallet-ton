@@ -33,13 +33,13 @@ import { signVerify } from '@ton/crypto'
 /** @typedef {import('@tetherto/wdk-wallet').TransferOptions} TransferOptions */
 /** @typedef {import('@tetherto/wdk-wallet').TransferResult} TransferResult */
 /** @typedef {import('@tetherto/wdk-wallet').TransactionReceipt} TransactionReceipt */
+/** @typedef {import('@tetherto/wdk-wallet').WaitForTransactionOptions} WaitForTransactionOptions */
 
 /**
- * A normalized TON transaction receipt, extended with the native ton transaction.
+ * The TON-specific fields added to a normalized transaction receipt.
  *
- * @typedef {TransactionReceipt & {
- *   transaction: TonTransactionReceipt | null
- * }} TonTransactionInfo
+ * @typedef {Object} TonTransactionDetails
+ * @property {TonTransactionReceipt | null} transaction - The native ton transaction, or null while the transaction is pending or dropped.
  */
 
 /**
@@ -265,7 +265,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    * Returns a normalized, finality-based receipt for a transaction.
    *
    * @param {string} hash - The transaction's message body hash.
-   * @returns {Promise<TonTransactionInfo>} The normalized receipt.
+   * @returns {Promise<TransactionReceipt & TonTransactionDetails>} The normalized receipt.
    * @throws {NoSuchElementError} If no transaction has been found for the given hash.
    */
   async getTransaction (hash) {
@@ -301,6 +301,18 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
       fee: transaction?.totalFees?.coins,
       transaction: transaction ?? null
     }
+  }
+
+  /**
+   * Blocks until a transaction reaches a terminal state (the requested finality target or `dropped`), or times out.
+   *
+   * @param {string} hash - The transaction's message body hash.
+   * @param {WaitForTransactionOptions} [options] - The wait options.
+   * @returns {Promise<TransactionReceipt & TonTransactionDetails>} The terminal receipt: the finality target reached (inspect `success` to tell success from revert), or `dropped`.
+   * @throws {TimeoutError} If the target is not reached before the timeout.
+   */
+  async waitForTransaction (hash, options = {}) {
+    return await super.waitForTransaction(hash, options)
   }
 
   /**
