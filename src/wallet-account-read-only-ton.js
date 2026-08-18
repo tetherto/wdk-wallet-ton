@@ -13,7 +13,7 @@
 // limitations under the License.
 'use strict'
 
-import { WalletAccountReadOnly } from '@tetherto/wdk-wallet'
+import { WalletAccountReadOnly, NoSuchElementError } from '@tetherto/wdk-wallet'
 
 import FailoverProvider from '@tetherto/wdk-failover-provider'
 
@@ -32,6 +32,15 @@ import { signVerify } from '@ton/crypto'
 /** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
 /** @typedef {import('@tetherto/wdk-wallet').TransferOptions} TransferOptions */
 /** @typedef {import('@tetherto/wdk-wallet').TransferResult} TransferResult */
+/** @typedef {import('@tetherto/wdk-wallet').TransactionReceipt} TransactionReceipt */
+/** @typedef {import('@tetherto/wdk-wallet').WaitForTransactionOptions} WaitForTransactionOptions */
+
+/**
+ * The TON-specific fields added to a normalized transaction receipt.
+ *
+ * @typedef {Object} TonTransactionDetails
+ * @property {TonTransactionReceipt | null} transaction - The native ton transaction, or null while the transaction is pending or dropped.
+ */
 
 /**
  * @typedef {Object} TonTransaction
@@ -220,18 +229,12 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
   /**
    * Returns a transaction's receipt.
    *
+   * @deprecated Use {@link getTransaction} instead, which returns a normalized, finality-based receipt. The raw ton transaction remains available on its `transaction` property.
    * @param {string} hash - The transaction's hash.
    * @returns {Promise<TonTransactionReceipt | null>} - The receipt, or null if the transaction has not been included in a block yet.
    */
   async getTransactionReceipt (hash) {
-    const query = new URLSearchParams({
-      body_hash: hash,
-      limit: 1
-    })
-
-    const response = await fetch(`${TON_CENTER_V3_URL}/transactionsByMessage?${query.toString()}`)
-
-    const { transactions } = await response.json()
+    const { transactions } = await this._fetchTransactionsByMessage(hash)
 
     if (!transactions || transactions.length === 0) {
       return null
@@ -256,6 +259,154 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
       })
       return transaction
     }
+  }
+
+  /**
+   * Returns a normalized, finality-based receipt for a transaction.
+   *
+   * The `hash` is the transaction's message body hash: the same value returned by the
+   * writable account's `sendTransaction` / `transfer` (`transfer.hash()`, the hash of the
+   * signed external-message body), which is exactly what TonCenter indexes as `body_hash`.
+   *
+   * Note: TonCenter only indexes transactions once they are included in a block, so a
+   * returned receipt is always `confirmed` or `final` — there is no visible `pending`
+   * (mempool) state through this API.
+   *
+   * @param {string} hash - The transaction's message body hash.
+   * @returns {Promise<TransactionReceipt & TonTransactionDetails>} The normalized receipt.
+   * @throws {NoSuchElementError} If no transaction has been found for the given hash.
+   */
+  async getTransaction (hash) {
+    const { transactions } = await this._fetchTransactionsByMessage(hash)
+
+    if (!transactions || transactions.length === 0) {
+      throw new NoSuchElementError(`No transaction found for '${hash}'.`)
+    }
+
+    const receipt = transactions[0]
+    const rawAddress = receipt.account
+
+    let transaction
+    try {
+      [transaction] = await this._tonClient.getTransactions(rawAddress, {
+        limit: 1,
+        hash: receipt.hash
+      })
+    } catch (error) {
+      [transaction] = await this._tonClient.getTransactions(rawAddress, {
+        limit: 1,
+        lt: receipt.lt,
+        hash: receipt.hash,
+        archival: true
+      })
+    }
+
+    return {
+      hash,
+      finality: receipt.mc_block_seqno != null ? 'final' : 'confirmed',
+      success: this._isTransactionSuccessful(transaction),
+      block: receipt.mc_block_seqno ?? undefined,
+      fee: transaction?.totalFees?.coins,
+      transaction: transaction ?? null
+    }
+  }
+
+  /**
+   * Blocks until a transaction reaches the requested finality target, or times out.
+   *
+   * Note: there is no `dropped` path. A transaction TonCenter has not indexed yet is
+   * indistinguishable from one that will never land, so it stays not-found and a dropped
+   * transaction surfaces as a {@link TimeoutError} rather than resolving to a `dropped` receipt.
+   *
+   * @param {string} hash - The transaction's message body hash.
+   * @param {WaitForTransactionOptions} [options] - The wait options.
+   * @returns {Promise<TransactionReceipt & TonTransactionDetails>} The terminal receipt for the finality target reached (inspect `success` to tell success from revert).
+   * @throws {TimeoutError} If the target is not reached before the timeout.
+   */
+  async waitForTransaction (hash, options = {}) {
+    return await super.waitForTransaction(hash, options)
+  }
+
+  /**
+   * Fetches the TON Center v3 transactions matching the given message body hash.
+   *
+   * @protected
+   * @param {string} hash - The message body hash.
+   * @returns {Promise<{ transactions?: Array<Object> }>} The TON Center response payload.
+   * @throws {Error} If the TON Center request returns a non-OK HTTP status.
+   */
+  async _fetchTransactionsByMessage (hash) {
+    const { baseUrl, apiKey } = this._resolveTonCenterEndpoint()
+
+    const query = new URLSearchParams({
+      body_hash: hash,
+      limit: 1
+    })
+
+    const url = `${baseUrl}/transactionsByMessage?${query.toString()}`
+
+    const response = apiKey
+      ? await fetch(url, { headers: { 'X-Api-Key': apiKey } })
+      : await fetch(url)
+
+    if (!response.ok) {
+      throw new Error(`TON Center request failed with status ${response.status}.`)
+    }
+
+    return await response.json()
+  }
+
+  /**
+   * Resolves the TON Center v3 REST base URL and api key from the configured client.
+   *
+   * @protected
+   * @returns {{ baseUrl: string, apiKey: string | undefined }} The resolved endpoint.
+   */
+  _resolveTonCenterEndpoint () {
+    const params = this._tonClient?.parameters
+    const endpoint = params?.endpoint
+    const apiKey = params?.apiKey
+
+    let baseUrl = TON_CENTER_V3_URL
+
+    if (endpoint) {
+      try {
+        baseUrl = `${new URL(endpoint).origin}/api/v3`
+      } catch {
+        baseUrl = TON_CENTER_V3_URL
+      }
+    }
+
+    return { baseUrl, apiKey }
+  }
+
+  /**
+   * Returns whether a committed transaction executed successfully, or undefined when the execution result can't be determined.
+   *
+   * @protected
+   * @param {TonTransactionReceipt} [transaction] - The native ton transaction.
+   * @returns {boolean | undefined} The execution result.
+   */
+  _isTransactionSuccessful (transaction) {
+    const description = transaction?.description
+
+    if (!description || description.type !== 'generic') {
+      return undefined
+    }
+
+    if (description.aborted) {
+      return false
+    }
+
+    if (description.computePhase?.type === 'vm' && !description.computePhase.success) {
+      return false
+    }
+
+    if (description.actionPhase && !description.actionPhase.success) {
+      return false
+    }
+
+    return true
   }
 
   /**

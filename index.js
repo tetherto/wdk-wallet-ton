@@ -21,8 +21,13 @@
 /** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
 /** @typedef {import('@tetherto/wdk-wallet').TransferOptions} TransferOptions */
 /** @typedef {import('@tetherto/wdk-wallet').TransferResult} TransferResult */
+/** @typedef {import('@tetherto/wdk-wallet').Finality} Finality */
+/** @typedef {import('@tetherto/wdk-wallet').TransactionReceipt} TransactionReceipt */
+/** @typedef {import('@tetherto/wdk-wallet').WaitForTransactionTarget} WaitForTransactionTarget */
+/** @typedef {import('@tetherto/wdk-wallet').WaitForTransactionOptions} WaitForTransactionOptions */
 
 /** @typedef {import('./src/wallet-account-ton.js').TonTransaction} TonTransaction */
+/** @typedef {import('./src/wallet-account-read-only-ton.js').TonTransactionDetails} TonTransactionDetails */
 /** @typedef {import('./src/wallet-account-ton.js').TonClientConfig} TonClientConfig */
 /** @typedef {import('./src/wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
 

@@ -6,6 +6,7 @@ import BlockchainWithLogs from './blockchain-with-logs.js'
 import FakeTonClient, { ACTIVE_ACCOUNT_FEE, UNINITIALIZED_ACCOUNT_FEE } from './fake-ton-client.js'
 
 import { WalletAccountReadOnlyTon } from '../index.js'
+import { NoSuchElementError } from '@tetherto/wdk-wallet'
 
 const PUBLIC_KEY = 'f2ade24192b5a0fba669da730d105088a3a848519f43b27f24bdd8395eb26b8f'
 const PRIVATE_KEY = '904a9fec5f3e5bea8f1b4c5180828843e6acd58c198967fd56b4159b44b5a68ef2ade24192b5a0fba669da730d105088a3a848519f43b27f24bdd8395eb26b8f'
@@ -200,6 +201,7 @@ describe('WalletAccountReadOnlyTon', () => {
       const hash = await sendTransaction('EQBP4mzpDIywL1SV-Wp9ZuBBlzprR9eXQgSYGEXiUEHm7yYF', 100_000)
 
       global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           transactions: [{
             hash: hash.toString('hex')
@@ -222,6 +224,7 @@ describe('WalletAccountReadOnlyTon', () => {
       const MESSAGE_HASH = 'e3dafa8c96cee59affae9a9ce1c1ac0661ba2b041bee6b46fd188f61ee70582a'
 
       global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           transactions: []
         })
@@ -232,6 +235,92 @@ describe('WalletAccountReadOnlyTon', () => {
       expect(global.fetch).toHaveBeenCalledWith(`https://toncenter.com/api/v3/transactionsByMessage?body_hash=${MESSAGE_HASH}&limit=1`)
 
       expect(receipt).toBe(null)
+    })
+  })
+
+  describe('getTransaction', () => {
+    const MESSAGE_HASH = 'e3dafa8c96cee59affae9a9ce1c1ac0661ba2b041bee6b46fd188f61ee70582a'
+
+    async function sendTransaction (to, value) {
+      const { isBounceable } = Address.parseFriendly(to)
+
+      const message = internal({
+        to,
+        value: fromNano(value),
+        bounce: isBounceable,
+        body: 'Transfer'
+      })
+
+      const transfer = await account._contract.createTransfer({
+        seqno: 0,
+        secretKey: ACCOUNT.keyPair.privateKey,
+        sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+        messages: [message]
+      })
+
+      const result = await account._contract.send(transfer)
+
+      return result.transactions[0].hash()
+    }
+
+    test('should throw NoSuchElementError if the transaction is not known', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ transactions: [] })
+      })
+
+      await expect(account.getTransaction(MESSAGE_HASH)).rejects.toThrow(NoSuchElementError)
+    })
+
+    test('should report confirmed for a committed but not-yet-referenced transaction', async () => {
+      await sendTonsTo(ACCOUNT.address, INITIAL_BALANCE, { init: account._wallet.init })
+
+      const hash = await sendTransaction('EQBP4mzpDIywL1SV-Wp9ZuBBlzprR9eXQgSYGEXiUEHm7yYF', 100_000)
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          transactions: [{ hash: hash.toString('hex') }]
+        })
+      })
+
+      const info = await account.getTransaction(MESSAGE_HASH)
+
+      expect(info.hash).toBe(MESSAGE_HASH)
+      expect(info.finality).toBe('confirmed')
+      expect(info.success).toBe(true)
+      expect(info.block).toBeUndefined()
+      expect(typeof info.fee).toBe('bigint')
+      expect(info.transaction.hash()).toBe(hash)
+    })
+
+    test('should report final once referenced by a masterchain block', async () => {
+      await sendTonsTo(ACCOUNT.address, INITIAL_BALANCE, { init: account._wallet.init })
+
+      const hash = await sendTransaction('EQBP4mzpDIywL1SV-Wp9ZuBBlzprR9eXQgSYGEXiUEHm7yYF', 100_000)
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          transactions: [{ hash: hash.toString('hex'), mc_block_seqno: 12345 }]
+        })
+      })
+
+      const info = await account.getTransaction(MESSAGE_HASH)
+
+      expect(info.finality).toBe('final')
+      expect(info.block).toBe(12345)
+      expect(info.success).toBe(true)
+    })
+
+    test('should throw on a non-OK TON Center response instead of reporting the transaction as not found', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 429,
+        json: () => Promise.resolve({})
+      })
+
+      await expect(account.getTransaction(MESSAGE_HASH)).rejects.toThrow('TON Center request failed with status 429.')
     })
   })
 
