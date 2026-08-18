@@ -67,11 +67,15 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      */
     getTransaction(hash: string): Promise<TransactionReceipt & TonTransactionDetails>;
     /**
-     * Blocks until a transaction reaches a terminal state (the requested finality target or `dropped`), or times out.
+     * Blocks until a transaction reaches the requested finality target, or times out.
+     *
+     * Note: there is no `dropped` path. A transaction TonCenter has not indexed yet is
+     * indistinguishable from one that will never land, so it stays not-found and a dropped
+     * transaction surfaces as a {@link TimeoutError} rather than resolving to a `dropped` receipt.
      *
      * @param {string} hash - The transaction's message body hash.
      * @param {WaitForTransactionOptions} [options] - The wait options.
-     * @returns {Promise<TransactionReceipt & TonTransactionDetails>} The terminal receipt: the finality target reached (inspect `success` to tell success from revert), or `dropped`.
+     * @returns {Promise<TransactionReceipt & TonTransactionDetails>} The terminal receipt for the finality target reached (inspect `success` to tell success from revert).
      * @throws {TimeoutError} If the target is not reached before the timeout.
      */
     waitForTransaction(hash: string, options?: WaitForTransactionOptions): Promise<TransactionReceipt & TonTransactionDetails>;
