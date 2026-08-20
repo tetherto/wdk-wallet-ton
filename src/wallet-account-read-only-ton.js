@@ -70,6 +70,8 @@ const TON_CENTER_V3_URL = 'https://toncenter.com/api/v3'
 
 const SECRET_KEY_NULL = Buffer.alloc(64)
 
+const BOC_MAGICS = [0xb5ee9c72, 0x68ff65f3]
+
 export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
   /**
    * Creates a new ton read-only wallet account.
@@ -486,22 +488,22 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
   }
 
   /**
-   * Parses a string message body: a base64-encoded serialized cell (BoC) is decoded to the cell
-   * it represents, any other string is kept as-is to be sent as a text comment.
+   * Parses a string message body: a string carrying the BoC magic prefix is decoded as a
+   * base64-encoded serialized cell, any other string is kept as-is to be sent as a text comment.
    *
-   * Serialized cells are unambiguous — they carry the BoC magic prefix and checksums — so a
-   * regular text comment can never be decoded as one by accident.
+   * The magic prefix makes the intent unambiguous, so a recognized serialized cell that fails
+   * to decode throws instead of being silently sent as a text comment.
    *
    * @protected
    * @param {string} body - The string message body.
    * @returns {Cell | string} The decoded cell, or the original string.
+   * @throws If the body carries the BoC magic prefix but is not a valid serialized cell.
    */
   _parseStringBody (body) {
-    try {
-      return Cell.fromBase64(body)
-    } catch {
-      return body
-    }
+    const bytes = Buffer.from(body, 'base64')
+    const isBoc = bytes.length >= 4 && BOC_MAGICS.includes(bytes.readUInt32BE(0))
+
+    return isBoc ? Cell.fromBase64(body) : body
   }
 
   /**

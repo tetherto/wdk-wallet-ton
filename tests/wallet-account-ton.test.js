@@ -260,6 +260,42 @@ describe('WalletAccountTon', () => {
       })
     })
 
+    test('should send a base64-looking string without the BoC magic prefix as a text comment', async () => {
+      const COMMENT = 'dGVzdCBjb21tZW50'
+
+      const TRANSACTION = {
+        to: RECIPIENT.address,
+        value: 1_000_000,
+        body: COMMENT
+      }
+
+      await account.sendTransaction(TRANSACTION)
+
+      expect(blockchain.transactions).toHaveTransaction({
+        from: account._wallet.address,
+        to: recipient._wallet.address,
+        body: beginCell()
+          .storeUint(0, 32)
+          .storeStringTail(COMMENT)
+          .endCell(),
+        success: true
+      })
+    })
+
+    test('should throw on a broken BoC body instead of sending it as a text comment', async () => {
+      const TRANSACTION = {
+        to: RECIPIENT.address,
+        value: 1_000_000,
+        body: 'te6cckEBAQEAAgAAAA'
+      }
+
+      const transactionCount = blockchain.transactions.length
+
+      await expect(account.sendTransaction(TRANSACTION)).rejects.toThrow()
+
+      expect(blockchain.transactions).toHaveLength(transactionCount)
+    })
+
     test('should broadcast an already-signed transaction', async () => {
       const signedTransfer = await buildSignedTransferCell(account, {
         to: RECIPIENT.address,
