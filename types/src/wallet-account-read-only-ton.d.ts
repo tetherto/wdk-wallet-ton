@@ -125,6 +125,19 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      */
     protected _getTransactionMessage({ to, value, bounceable, body }: TonTransaction): Promise<MessageRelaxed>;
     /**
+     * Parses a string message body: a string carrying the BoC magic prefix is decoded as a
+     * base64-encoded serialized cell, any other string is kept as-is to be sent as a text comment.
+     *
+     * The magic prefix makes the intent unambiguous, so a recognized serialized cell that fails
+     * to decode throws instead of being silently sent as a text comment.
+     *
+     * @protected
+     * @param {string} body - The string message body.
+     * @returns {Cell | string} The decoded cell, or the original string.
+     * @throws If the body carries the BoC magic prefix but is not a valid serialized cell.
+     */
+    protected _parseStringBody(body: string): Cell | string;
+    /**
      * Creates and returns an internal message to execute the given token transfer.
      *
      * @protected
@@ -188,7 +201,8 @@ export type TonTransaction = {
      */
     bounceable?: boolean;
     /**
-     * - Optional message body for smart contract interactions.
+     * - Optional message body for smart contract interactions: a cell, a base64-encoded
+     * serialized cell (BoC), or any other string to send as a text comment.
      */
     body?: string | Cell;
 };

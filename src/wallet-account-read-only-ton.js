@@ -17,11 +17,10 @@ import { WalletAccountReadOnly, NoSuchElementError } from '@tetherto/wdk-wallet'
 
 import FailoverProvider from '@tetherto/wdk-failover-provider'
 
-import { Address, beginCell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
+import { Address, beginCell, Cell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
 
 import { signVerify } from '@ton/crypto'
 
-/** @typedef {import('@ton/ton').Cell} Cell */
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
 /** @typedef {import('@ton/ton').Transaction} TonTransactionReceipt */
 /**
@@ -47,7 +46,8 @@ import { signVerify } from '@ton/crypto'
  * @property {string} to - The transaction's recipient.
  * @property {number | bigint} value - The amount of tons to send to the recipient (in nanotons).
  * @property {boolean} [bounceable] - If set, overrides the bounceability of the transaction.
- * @property {string | Cell} [body] - Optional message body for smart contract interactions.
+ * @property {string | Cell} [body] - Optional message body for smart contract interactions: a cell, a base64-encoded
+ *   serialized cell (BoC), or any other string to send as a text comment.
  */
 
 /**
@@ -69,6 +69,8 @@ const DUMMY_MESSAGE_VALUE = toNano(0.05)
 const TON_CENTER_V3_URL = 'https://toncenter.com/api/v3'
 
 const SECRET_KEY_NULL = Buffer.alloc(64)
+
+const BOC_MAGICS = [0xb5ee9c72, 0x68ff65f3]
 
 export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
   /**
@@ -471,6 +473,10 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
   async _getTransactionMessage ({ to, value, bounceable, body }) {
     const { isBounceable } = Address.parseFriendly(to)
 
+    if (typeof body === 'string') {
+      body = this._parseStringBody(body)
+    }
+
     const message = internal({
       to,
       value: fromNano(value),
@@ -479,6 +485,25 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
     })
 
     return message
+  }
+
+  /**
+   * Parses a string message body: a string carrying the BoC magic prefix is decoded as a
+   * base64-encoded serialized cell, any other string is kept as-is to be sent as a text comment.
+   *
+   * The magic prefix makes the intent unambiguous, so a recognized serialized cell that fails
+   * to decode throws instead of being silently sent as a text comment.
+   *
+   * @protected
+   * @param {string} body - The string message body.
+   * @returns {Cell | string} The decoded cell, or the original string.
+   * @throws If the body carries the BoC magic prefix but is not a valid serialized cell.
+   */
+  _parseStringBody (body) {
+    const bytes = Buffer.from(body, 'base64')
+    const isBoc = bytes.length >= 4 && BOC_MAGICS.includes(bytes.readUInt32BE(0))
+
+    return isBoc ? Cell.fromBase64(body) : body
   }
 
   /**
