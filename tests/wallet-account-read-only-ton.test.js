@@ -49,6 +49,28 @@ describe('WalletAccountReadOnlyTon', () => {
     await testToken.sendMint(treasury.getSender(), Address.parse(to), value)
   }
 
+  describe('_generateQueryId', () => {
+    test('should not use Math.random', () => {
+      const mathRandom = jest.spyOn(Math, 'random').mockReturnValue(0.5)
+
+      try {
+        const queryId1 = account._generateQueryId()
+        const queryId2 = account._generateQueryId()
+
+        expect(queryId1).not.toBe(queryId2)
+      } finally {
+        mathRandom.mockRestore()
+      }
+    })
+
+    test('should generate unique values in the full 64-bit range', () => {
+      const queryIds = Array.from({ length: 100 }, () => account._generateQueryId())
+
+      expect(new Set(queryIds).size).toBe(queryIds.length)
+      expect(queryIds.every(queryId => queryId >= 0n && queryId <= 0xffffffffffffffffn)).toBe(true)
+    })
+  })
+
   beforeEach(async () => {
     blockchain = await BlockchainWithLogs.create()
     treasury = await blockchain.treasury('treasury', { balance: TREASURY_BALANCE })

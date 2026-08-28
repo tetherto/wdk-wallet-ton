@@ -597,9 +597,13 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    * @returns {bigint} The random queryId.
    */
   _generateQueryId () {
-    const high = BigInt(Math.floor(Math.random() * 0x100000000))
-    const low = BigInt(Math.floor(Math.random() * 0x100000000))
-    const queryId = (high << 32n) | low
+    const bytes = new Uint8Array(8)
+    globalThis.crypto.getRandomValues(bytes)
+
+    let queryId = 0n
+    for (const byte of bytes) {
+      queryId = (queryId << 8n) | BigInt(byte)
+    }
 
     return queryId
   }
