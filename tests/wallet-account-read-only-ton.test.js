@@ -327,7 +327,7 @@ describe('WalletAccountReadOnlyTon', () => {
   describe('verify', () => {
     const MESSAGE = 'Dummy message to sign.'
 
-    const SIGNATURE = '640cb213751dcff7ed5f72330ca36efd6d640b9cc1df71418ec3c4f730b3fa8e81e450386e2a00c5e87da06f3edefebadd958b7d31a22b8d430da846ce087c06'
+    const SIGNATURE = 'adeb9a3d83a275f8ff385ac93731d6b19f9f0a1a3354e29503a5748be829b463414a2698f91d90f4ec40b4281957f2b3104e167681bc215a70e99768305de405'
 
     test('should return true for a valid signature', async () => {
       const result = await account.verify(MESSAGE, SIGNATURE)
