@@ -112,19 +112,7 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      * @protected
      * @type {TonClient | undefined}
      */
-    this._tonClient = undefined
-
-    const { tonClient, retries = 3 } = config
-
-    if (Array.isArray(tonClient)) {
-      if (tonClient.length > 0) {
-        this._tonClient = WalletAccountReadOnlyTon._createTonClientWithFailoverApi(tonClient, retries)
-      }
-    } else if (tonClient) {
-      this._tonClient = tonClient instanceof TonClient
-        ? tonClient
-        : new TonClient({ endpoint: tonClient.url, apiKey: tonClient.secretKey })
-    }
+    this._tonClient = WalletAccountReadOnlyTon._buildTonClient(config)
 
     /**
      * The v5r1 wallet's contract.
@@ -133,6 +121,32 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      * @type {OpenedContract<WalletContractV5R1> | undefined}
      */
     this._contract = this._tonClient?.open(this._wallet)
+  }
+
+  /**
+   * Builds the ton client from the wallet configuration: a ton center config, an already-built
+   * {@link TonClient} reused as-is, or a list of either (with internal api calls failing over).
+   *
+   * @protected
+   * @param {Omit<TonWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>} [config] - The configuration object.
+   * @returns {TonClient | undefined} The ton client, or undefined if none is configured.
+   */
+  static _buildTonClient (config = {}) {
+    const { tonClient, retries = 3 } = config
+
+    if (Array.isArray(tonClient)) {
+      return tonClient.length > 0
+        ? WalletAccountReadOnlyTon._createTonClientWithFailoverApi(tonClient, retries)
+        : undefined
+    }
+
+    if (tonClient) {
+      return tonClient instanceof TonClient
+        ? tonClient
+        : new TonClient({ endpoint: tonClient.url, apiKey: tonClient.secretKey })
+    }
+
+    return undefined
   }
 
   /**
