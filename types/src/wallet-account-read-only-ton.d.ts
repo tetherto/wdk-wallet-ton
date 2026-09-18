@@ -1,5 +1,14 @@
 export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
     /**
+     * Builds the ton client from the wallet configuration: a ton center config, an already-built
+     * {@link TonClient} reused as-is, or a list of either (with internal api calls failing over).
+     *
+     * @protected
+     * @param {Omit<TonWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>} [config] - The configuration object.
+     * @returns {TonClient | undefined} The ton client, or undefined if none is configured.
+     */
+    protected static _buildTonClient(config?: Omit<TonWalletConfig, "transferMaxFee" | "transactionMaxFee">): TonClient | undefined;
+    /**
      * Creates a TON client whose internal API calls fail over across configured clients.
      *
      * @protected
