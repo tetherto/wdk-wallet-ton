@@ -21,6 +21,8 @@ import { Address, beginCell, Cell, fromNano, internal, SendMode, toNano, TonClie
 
 import { signVerify } from '@ton/crypto'
 
+import { getMessageSigningHash } from './message-signing.js'
+
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
 /** @typedef {import('@ton/ton').Transaction} TonTransactionReceipt */
 /**
@@ -143,9 +145,8 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    * @returns {Promise<boolean>} True if the signature is valid.
    */
   async verify (message, signature) {
-    const _message = Buffer.from(message)
     const _signature = Buffer.from(signature, 'hex')
-    return signVerify(_message, _signature, this._wallet.publicKey)
+    return signVerify(getMessageSigningHash(message), _signature, this._wallet.publicKey)
   }
 
   /**

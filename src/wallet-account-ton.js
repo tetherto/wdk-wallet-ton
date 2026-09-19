@@ -26,6 +26,7 @@ import { sodium_memzero } from 'sodium-universal'
 import * as bip39 from 'bip39'
 
 import WalletAccountReadOnlyTon from './wallet-account-read-only-ton.js'
+import { getMessageSigningHash } from './message-signing.js'
 
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
 /** @typedef {import('@ton/ton').Transaction} TonTransactionReceipt */
@@ -133,9 +134,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
    * @returns {Promise<string>} The message's signature.
    */
   async sign (message) {
-    const _message = Buffer.from(message)
-
-    return sign(_message, this._keyPair.secretKey)
+    return sign(getMessageSigningHash(message), this._keyPair.secretKey)
       .toString('hex')
   }
 

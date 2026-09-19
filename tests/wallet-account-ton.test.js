@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals'
 
 import { Address, beginCell, fromNano, internal, SendMode } from '@ton/ton'
+import { signVerify } from '@ton/crypto'
 import { JettonMinter } from '@ton-community/assets-sdk'
 
 import * as bip39 from 'bip39'
@@ -165,12 +166,21 @@ describe('WalletAccountTon', () => {
   describe('sign', () => {
     const MESSAGE = 'Dummy message to sign.'
 
-    const EXPECTED_SIGNATURE = '640cb213751dcff7ed5f72330ca36efd6d640b9cc1df71418ec3c4f730b3fa8e81e450386e2a00c5e87da06f3edefebadd958b7d31a22b8d430da846ce087c06'
+    const EXPECTED_SIGNATURE = 'adeb9a3d83a275f8ff385ac93731d6b19f9f0a1a3354e29503a5748be829b463414a2698f91d90f4ec40b4281957f2b3104e167681bc215a70e99768305de405'
 
     test('should return the correct signature', async () => {
       const signature = await account.sign(MESSAGE)
 
       expect(signature).toBe(EXPECTED_SIGNATURE)
+    })
+
+    test('should domain-separate message signatures from raw transaction authorization bytes', async () => {
+      const transactionHash = Buffer.alloc(32, 0x42)
+      const signature = await account.sign(transactionHash)
+      const signatureBytes = Buffer.from(signature, 'hex')
+
+      expect(signVerify(transactionHash, signatureBytes, account.keyPair.publicKey)).toBe(false)
+      await expect(account.verify(transactionHash, signature)).resolves.toBe(true)
     })
   })
 
