@@ -36,11 +36,6 @@ function mockCryptoRandomValues (...queryIds) {
   })
 }
 
-const originalMathRandom = Math.random
-function restoreMathRandom () {
-  global.Math.random = originalMathRandom
-}
-
 const originalCryptoGetRandomValues = globalThis.crypto.getRandomValues
 function restoreCryptoGetRandomValues () {
   globalThis.crypto.getRandomValues = originalCryptoGetRandomValues
@@ -145,7 +140,6 @@ describe('WalletAccountTon', () => {
 
   afterEach(() => {
     account.dispose()
-    restoreMathRandom()
     restoreCryptoGetRandomValues()
     restoreDateNow()
   })
