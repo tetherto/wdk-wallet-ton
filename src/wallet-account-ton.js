@@ -252,7 +252,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
    */
   async toReadOnlyAccount () {
     if (!this._tonReadOnlyAccount) {
-      this._tonReadOnlyAccount = new WalletAccountReadOnlyTon(this._keyPair.publicKey, this._config)
+      this._tonReadOnlyAccount = new WalletAccountReadOnlyTon(this._keyPair.publicKey, { ...this._config, tonClient: this._tonClient })
     }
 
     return this._tonReadOnlyAccount

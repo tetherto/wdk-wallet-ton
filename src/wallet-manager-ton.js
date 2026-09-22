@@ -17,6 +17,8 @@ import WalletManager from '@tetherto/wdk-wallet'
 
 import WalletAccountTon from './wallet-account-ton.js'
 
+/** @typedef {import('@ton/ton').TonClient} TonClient */
+
 /** @typedef {import('@tetherto/wdk-wallet').FeeRates} FeeRates */
 
 /** @typedef {import('./wallet-account-ton.js').TonWalletConfig} TonWalletConfig */
@@ -40,6 +42,15 @@ export default class WalletManagerTon extends WalletManager {
      * @type {TonWalletConfig}
      */
     this._config = config
+
+    /**
+     * The ton client. Shared with every account this manager creates, so two accounts never
+     * open two clients for the same endpoint.
+     *
+     * @protected
+     * @type {TonClient | undefined}
+     */
+    this._tonClient = WalletAccountTon._buildTonClient(config)
   }
 
   /**
@@ -66,12 +77,23 @@ export default class WalletManagerTon extends WalletManager {
    */
   async getAccountByPath (path) {
     if (!this._accounts[path]) {
-      const account = new WalletAccountTon(this.seed, path, this._config)
+      const account = new WalletAccountTon(this.seed, path, this._accountConfig())
 
       this._accounts[path] = account
     }
 
     return this._accounts[path]
+  }
+
+  /**
+   * Builds the account config, injecting the manager's shared ton client so accounts reuse
+   * it instead of opening their own.
+   *
+   * @private
+   * @returns {TonWalletConfig} The account configuration.
+   */
+  _accountConfig () {
+    return { ...this._config, tonClient: this._tonClient }
   }
 
   /**
