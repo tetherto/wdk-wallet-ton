@@ -21,6 +21,8 @@ import { Address, beginCell, Cell, fromNano, internal, SendMode, toNano, TonClie
 
 import { signVerify } from '@ton/crypto'
 
+import { getMessageSigningHash } from './message-signing.js'
+
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
 /** @typedef {import('@ton/ton').Transaction} TonTransactionReceipt */
 /**
@@ -157,9 +159,8 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    * @returns {Promise<boolean>} True if the signature is valid.
    */
   async verify (message, signature) {
-    const _message = Buffer.from(message)
     const _signature = Buffer.from(signature, 'hex')
-    return signVerify(_message, _signature, this._wallet.publicKey)
+    return signVerify(getMessageSigningHash(message), _signature, this._wallet.publicKey)
   }
 
   /**
@@ -611,9 +612,13 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    * @returns {bigint} The random queryId.
    */
   _generateQueryId () {
-    const high = BigInt(Math.floor(Math.random() * 0x100000000))
-    const low = BigInt(Math.floor(Math.random() * 0x100000000))
-    const queryId = (high << 32n) | low
+    const bytes = new Uint8Array(8)
+    globalThis.crypto.getRandomValues(bytes)
+
+    let queryId = 0n
+    for (const byte of bytes) {
+      queryId = (queryId << 8n) | BigInt(byte)
+    }
 
     return queryId
   }

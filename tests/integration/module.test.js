@@ -13,9 +13,30 @@ function calculateQueryId (highRandom, lowRandom) {
   return queryId
 }
 
-const originalMathRandom = Math.random
-function restoreMathRandom () {
-  global.Math.random = originalMathRandom
+function queryIdToBytes (queryId) {
+  const bytes = new Uint8Array(8)
+  let value = queryId
+
+  for (let index = bytes.length - 1; index >= 0; index--) {
+    bytes[index] = Number(value & 0xffn)
+    value >>= 8n
+  }
+
+  return bytes
+}
+
+function mockCryptoRandomValues (...queryIds) {
+  let index = 0
+
+  globalThis.crypto.getRandomValues = jest.fn(bytes => {
+    bytes.set(queryIdToBytes(queryIds[index++]))
+    return bytes
+  })
+}
+
+const originalCryptoGetRandomValues = globalThis.crypto.getRandomValues
+function restoreCryptoGetRandomValues () {
+  globalThis.crypto.getRandomValues = originalCryptoGetRandomValues
 }
 
 const abs = x => x < 0n ? -x : x
@@ -95,7 +116,7 @@ describe('@wdk/wallet-ton', () => {
   })
 
   afterEach(() => {
-    restoreMathRandom()
+    restoreCryptoGetRandomValues()
   })
 
   test('should derive an account, quote the cost of a tx and send the tx', async () => {
@@ -198,10 +219,8 @@ describe('@wdk/wallet-ton', () => {
       amount: 1_000n
     }
 
-    global.Math.random = jest.fn()
-      .mockReturnValueOnce(0.5).mockReturnValueOnce(0.25)
-      .mockReturnValueOnce(0.5).mockReturnValueOnce(0.25)
     const expectedQueryId = calculateQueryId(0.5, 0.25)
+    mockCryptoRandomValues(expectedQueryId, expectedQueryId)
 
     const { fee: quoteFee } = await account0.quoteTransfer(TRANSFER)
 

@@ -28,6 +28,7 @@ import * as bip39 from 'bip39'
 import { DisposalError } from '@tetherto/wdk-wallet'
 
 import WalletAccountReadOnlyTon from './wallet-account-read-only-ton.js'
+import { getMessageSigningHash } from './message-signing.js'
 
 /** @typedef {import('@ton/ton').MessageRelaxed} MessageRelaxed */
 /** @typedef {import('@ton/ton').Transaction} TonTransactionReceipt */
@@ -60,7 +61,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
   /**
    * Creates a new ton wallet account.
    *
-   * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+   * @param {string | Uint8Array} seed - A [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
    * @param {string} path - The BIP-44 derivation path (e.g. "0'/0/0").
    * @param {TonWalletConfig} [config] - The configuration object.
    */
@@ -152,9 +153,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
       throw new DisposalError('The account has been disposed.')
     }
 
-    const _message = Buffer.from(message)
-
-    return sign(_message, this._keyPair.secretKey)
+    return sign(getMessageSigningHash(message), this._keyPair.secretKey)
       .toString('hex')
   }
 
