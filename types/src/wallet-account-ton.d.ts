@@ -19,6 +19,14 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon implement
     private _path;
     /** @private */
     private _keyPair;
+    /** @private */
+    private _disposed;
+    /**
+     * True if the account has been disposed.
+     *
+     * @type {boolean}
+     */
+    get disposed(): boolean;
     /**
      * The derivation path's index of this account.
      *
@@ -46,6 +54,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon implement
      *
      * @param {string} message - The message to sign.
      * @returns {Promise<string>} The message's signature.
+     * @throws {DisposalError} If the account has been disposed.
      */
     sign(message: string): Promise<string>;
     /**
@@ -54,6 +63,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon implement
      * @param {TonTransaction} tx - The transaction to sign.
      * @returns {Promise<Cell>} The signed external-message body as a TON Cell.
      * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
+     * @throws {DisposalError} If the account has been disposed.
      */
     signTransaction(tx: TonTransaction): Promise<Cell>;
     /**
@@ -69,6 +79,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon implement
      * @param {TonTransaction | Cell} tx - The transaction, or a signed transfer as a TON Cell.
      * @returns {Promise<TransactionResult>} The transaction's result.
      * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
+     * @throws {DisposalError} If the account has been disposed.
      */
     sendTransaction(tx: TonTransaction | Cell): Promise<TransactionResult>;
     /**
@@ -77,6 +88,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon implement
      * @param {TransferOptions} options - The transfer's options.
      * @returns {Promise<TransferResult>} The transfer's result.
      * @throws {Error} If the transfer's cost exceeds the maximum transfer fee option.
+     * @throws {DisposalError} If the account has been disposed.
      */
     transfer(options: TransferOptions): Promise<TransferResult>;
     /**
