@@ -1,5 +1,6 @@
 export { default } from "./src/wallet-manager-ton.js";
 export { default as WalletAccountReadOnlyTon } from "./src/wallet-account-read-only-ton.js";
+export { default as WalletAccountReadOnlyTonAddress } from "./src/wallet-account-read-only-ton-address.js";
 export { default as WalletAccountTon } from "./src/wallet-account-ton.js";
 export type TonTransactionReceipt = import("@ton/ton").Transaction;
 export type FeeRates = import("@tetherto/wdk-wallet").FeeRates;
