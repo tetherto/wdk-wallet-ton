@@ -25,6 +25,8 @@ import { sodium_memzero } from 'sodium-universal'
 
 import * as bip39 from 'bip39'
 
+import { DisposalError } from '@tetherto/wdk-wallet'
+
 import WalletAccountReadOnlyTon from './wallet-account-read-only-ton.js'
 import { getMessageSigningHash } from './message-signing.js'
 
@@ -91,6 +93,18 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
 
     /** @private */
     this._keyPair = keyPair
+
+    /** @private */
+    this._disposed = false
+  }
+
+  /**
+   * True if the account has been disposed.
+   *
+   * @type {boolean}
+   */
+  get disposed () {
+    return this._disposed
   }
 
   /**
@@ -132,8 +146,13 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
    *
    * @param {string} message - The message to sign.
    * @returns {Promise<string>} The message's signature.
+   * @throws {DisposalError} If the account has been disposed.
    */
   async sign (message) {
+    if (this.disposed) {
+      throw new DisposalError('The account has been disposed.')
+    }
+
     return sign(getMessageSigningHash(message), this._keyPair.secretKey)
       .toString('hex')
   }
@@ -144,8 +163,13 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
    * @param {TonTransaction} tx - The transaction to sign.
    * @returns {Promise<Cell>} The signed external-message body as a TON Cell.
    * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
+   * @throws {DisposalError} If the account has been disposed.
    */
   async signTransaction (tx) {
+    if (this.disposed) {
+      throw new DisposalError('The account has been disposed.')
+    }
+
     if (!this._tonClient) {
       throw new Error('The wallet must be connected to ton center to sign transactions.')
     }
@@ -190,8 +214,13 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
    * @param {TonTransaction | Cell} tx - The transaction, or a signed transfer as a TON Cell.
    * @returns {Promise<TransactionResult>} The transaction's result.
    * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
+   * @throws {DisposalError} If the account has been disposed.
    */
   async sendTransaction (tx) {
+    if (this.disposed) {
+      throw new DisposalError('The account has been disposed.')
+    }
+
     if (!this._tonClient) {
       throw new Error('The wallet must be connected to ton center to send transactions.')
     }
@@ -221,9 +250,14 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
    * @param {TransferOptions} options - The transfer's options.
    * @returns {Promise<TransferResult>} The transfer's result.
    * @throws {Error} If the transfer's cost exceeds the maximum transfer fee option.
+   * @throws {DisposalError} If the account has been disposed.
    */
 
   async transfer (options) {
+    if (this.disposed) {
+      throw new DisposalError('The account has been disposed.')
+    }
+
     if (!this._tonClient) {
       throw new Error('The wallet must be connected to ton center to transfer tokens.')
     }
@@ -262,9 +296,13 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
    * Disposes the wallet account, erasing the private key from the memory.
    */
   dispose () {
+    if (this._disposed) return
+
     sodium_memzero(this._keyPair.secretKey)
 
     this._keyPair.secretKey = undefined
+
+    this._disposed = true
   }
 
   async _getTransfer (message) {
