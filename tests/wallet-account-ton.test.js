@@ -637,6 +637,56 @@ describe('WalletAccountTon', () => {
       })
     })
 
+    describe('when the jetton wallet code is stored as a library cell', () => {
+      async function getLibraryCell () {
+        const jettonWalletAddress = await testToken.getWalletAddress(account._wallet.address)
+        const contract = await blockchain.getContract(jettonWalletAddress)
+
+        return beginCell().storeUint(2, 8).storeBuffer(contract.accountState.state.code.hash()).endCell({ exotic: true })
+      }
+
+      test('should transfer if the jetton master reports the code as a library cell', async () => {
+        const libraryCell = await getLibraryCell()
+        const runMethod = tonClient.runMethod.bind(tonClient)
+
+        jest.spyOn(tonClient, 'runMethod').mockImplementation(async (target, name, stack) => {
+          if (name === 'get_jetton_data') {
+            const empty = beginCell().endCell()
+
+            return {
+              stack: new TupleReader([
+                { type: 'int', value: 0n },
+                { type: 'int', value: 0n },
+                { type: 'slice', cell: empty },
+                { type: 'cell', cell: empty },
+                { type: 'cell', cell: libraryCell }
+              ])
+            }
+          }
+
+          return runMethod(target, name, stack)
+        })
+
+        await expect(account.transfer({ token: testToken.address.toString(), recipient: RECIPIENT.address, amount: 1_000 }))
+          .resolves.toBeDefined()
+      })
+
+      test('should transfer if the jetton wallet stores its code as a library cell', async () => {
+        const libraryCell = await getLibraryCell()
+        const getContractState = tonClient.getContractState.bind(tonClient)
+        const jettonWalletAddress = await testToken.getWalletAddress(account._wallet.address)
+
+        jest.spyOn(tonClient, 'getContractState').mockImplementation(async (address) => {
+          const state = await getContractState(address)
+
+          return address.equals(jettonWalletAddress) ? { ...state, code: libraryCell.toBoc() } : state
+        })
+
+        await expect(account.transfer({ token: testToken.address.toString(), recipient: RECIPIENT.address, amount: 1_000 }))
+          .resolves.toBeDefined()
+      })
+    })
+
     test('should generate different hashes for identical token transfers (queryId ensures uniqueness)', async () => {
       const TRANSFER = {
         token: testToken.address.toString(),

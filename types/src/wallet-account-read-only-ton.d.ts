@@ -125,22 +125,24 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      * @param {{ allowUndeployed?: boolean }} [options] - If `allowUndeployed` is set, an address with no contract deployed is accepted.
      * @returns {Promise<Address>} The jetton wallet address.
      */
-    protected _getJettonWalletAddress(tokenAddress: string, { allowUndeployed }?: {
+    protected _getJettonWalletAddress(tokenAddress: string, options?: {
         allowUndeployed?: boolean;
     }): Promise<Address>;
     /**
-     * Checks that an address is the account's wallet for the given jetton.
+     * Returns the account's jetton wallet for the given jetton, after checking on chain that the
+     * address reported by the jetton master is that wallet.
      *
      * @protected
-     * @param {Address} tokenAddress - The jetton master address.
-     * @param {Address} jettonWalletAddress - The jetton wallet address reported by the master.
-     * @param {{ allowUndeployed: boolean }} options - If set, an address with no contract deployed is accepted.
-     * @returns {Promise<void>}
-     * @throws {Error} If the address is not the account's wallet for this jetton.
+     * @param {string} tokenAddress - The jetton token address.
+     * @param {{ allowUndeployed?: boolean }} [options] - If `allowUndeployed` is set, an address with no contract deployed is accepted (with a zero balance).
+     * @returns {Promise<{ address: Address, balance: bigint }>} The jetton wallet address and balance.
      */
-    protected _verifyJettonWallet(tokenAddress: Address, jettonWalletAddress: Address, { allowUndeployed }: {
-        allowUndeployed: boolean;
-    }): Promise<void>;
+    protected _getJettonWallet(tokenAddress: string, { allowUndeployed }?: {
+        allowUndeployed?: boolean;
+    }): Promise<{
+        address: Address;
+        balance: bigint;
+    }>;
     /**
      * Creates and returns an internal message to execute the given transaction.
      *

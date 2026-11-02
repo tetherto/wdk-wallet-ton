@@ -17,7 +17,7 @@ import { WalletAccountReadOnly, NoSuchElementError } from '@tetherto/wdk-wallet'
 
 import FailoverProvider from '@tetherto/wdk-failover-provider'
 
-import { Address, beginCell, Cell, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
+import { Address, beginCell, Cell, CellType, fromNano, internal, SendMode, toNano, TonClient, WalletContractV5R1 } from '@ton/ton'
 
 import { signVerify } from '@ton/crypto'
 
@@ -74,6 +74,25 @@ const SECRET_KEY_NULL = Buffer.alloc(64)
 
 const BOC_MAGICS = [0xb5ee9c72, 0x68ff65f3, 0xacc3a728]
 
+/**
+ * Returns the hash of the ordinary cell a code cell stands for: a library cell (an exotic cell
+ * holding only the hash of the code) and the code it references run the same code, but their own
+ * hashes differ.
+ *
+ * @param {Cell} code - The code cell.
+ * @returns {Buffer} The code hash.
+ */
+function getCodeHash (code) {
+  if (code.type === CellType.Library) {
+    const slice = code.beginParse(true)
+
+    slice.loadUint(8)
+
+    return slice.loadBuffer(32)
+  }
+
+  return code.hash()
+}
 export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
   /**
    * Creates a new ton read-only wallet account.
@@ -189,21 +208,9 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
       throw new Error('The wallet must be connected to ton center to get token balances.')
     }
 
-    try {
-      const jettonWalletAddress = await this._getJettonWalletAddress(tokenAddress, { allowUndeployed: true })
+    const { balance } = await this._getJettonWallet(tokenAddress, { allowUndeployed: true })
 
-      const { stack } = await this._tonClient.runMethod(jettonWalletAddress, 'get_wallet_data', [])
-
-      const balance = stack.readBigNumber()
-
-      return balance
-    } catch (error) {
-      if (error.message.includes('exit_code: -13')) {
-        return 0n
-      }
-
-      throw error
-    }
+    return balance
   }
 
   /**
@@ -464,41 +471,41 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
    * @param {{ allowUndeployed?: boolean }} [options] - If `allowUndeployed` is set, an address with no contract deployed is accepted.
    * @returns {Promise<Address>} The jetton wallet address.
    */
-  async _getJettonWalletAddress (tokenAddress, { allowUndeployed = false } = {}) {
-    tokenAddress = Address.parse(tokenAddress)
+  async _getJettonWalletAddress (tokenAddress, options) {
+    const { address } = await this._getJettonWallet(tokenAddress, options)
 
-    const address = this._wallet.address
-
-    const { stack } = await this._tonClient.runMethod(tokenAddress, 'get_wallet_address', [{
-      type: 'slice',
-      cell: beginCell().storeAddress(address).endCell()
-    }])
-
-    const jettonWalletAddress = stack.readAddress()
-
-    await this._verifyJettonWallet(tokenAddress, jettonWalletAddress, { allowUndeployed })
-
-    return jettonWalletAddress
+    return address
   }
 
   /**
-   * Checks that an address is the account's wallet for the given jetton.
+   * Returns the account's jetton wallet for the given jetton, after checking on chain that the
+   * address reported by the jetton master is that wallet.
    *
    * @protected
-   * @param {Address} tokenAddress - The jetton master address.
-   * @param {Address} jettonWalletAddress - The jetton wallet address reported by the master.
-   * @param {{ allowUndeployed: boolean }} options - If set, an address with no contract deployed is accepted.
-   * @returns {Promise<void>}
+   * @param {string} tokenAddress - The jetton token address.
+   * @param {{ allowUndeployed?: boolean }} [options] - If `allowUndeployed` is set, an address with no contract deployed is accepted (with a zero balance).
+   * @returns {Promise<{ address: Address, balance: bigint }>} The jetton wallet address and balance.
    * @throws {Error} If the address is not the account's wallet for this jetton.
    */
-  async _verifyJettonWallet (tokenAddress, jettonWalletAddress, { allowUndeployed }) {
+  async _getJettonWallet (tokenAddress, { allowUndeployed = false } = {}) {
     const invalidJettonWallet = 'The jetton master returned an invalid jetton wallet address.'
 
-    const { code } = await this._tonClient.getContractState(jettonWalletAddress)
+    tokenAddress = Address.parse(tokenAddress)
+
+    const owner = this._wallet.address
+
+    const { stack } = await this._tonClient.runMethod(tokenAddress, 'get_wallet_address', [{
+      type: 'slice',
+      cell: beginCell().storeAddress(owner).endCell()
+    }])
+
+    const address = stack.readAddress()
+
+    const { code } = await this._tonClient.getContractState(address)
 
     if (!code) {
       if (allowUndeployed) {
-        return
+        return { address, balance: 0n }
       }
 
       throw new Error('The account has no jetton wallet deployed for this token.')
@@ -506,22 +513,24 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
 
     const { stack: masterStack } = await this._tonClient.runMethod(tokenAddress, 'get_jetton_data', [])
 
+    // total_supply, mintable, admin_address, jetton_content, jetton_wallet_code
     masterStack.skip(4)
     const expectedCode = masterStack.readCell()
 
-    if (!Cell.fromBoc(code)[0].hash().equals(expectedCode.hash())) {
+    if (!getCodeHash(Cell.fromBoc(code)[0]).equals(getCodeHash(expectedCode))) {
       throw new Error(invalidJettonWallet)
     }
 
-    const { stack: walletStack } = await this._tonClient.runMethod(jettonWalletAddress, 'get_wallet_data', [])
+    const { stack: walletStack } = await this._tonClient.runMethod(address, 'get_wallet_data', [])
 
-    walletStack.skip(1)
-    const owner = walletStack.readAddress()
-    const master = walletStack.readAddress()
+    // balance, owner_address, jetton_master_address, jetton_wallet_code
+    const balance = walletStack.readBigNumber()
 
-    if (!owner.equals(this._wallet.address) || !master.equals(tokenAddress)) {
+    if (!walletStack.readAddress().equals(owner) || !walletStack.readAddress().equals(tokenAddress)) {
       throw new Error(invalidJettonWallet)
     }
+
+    return { address, balance }
   }
 
   /**
