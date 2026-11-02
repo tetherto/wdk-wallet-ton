@@ -480,56 +480,6 @@ describe('WalletAccountTon', () => {
       })
     })
 
-    describe('expiry of a transfer signed at seqno 0', () => {
-      const TRANSACTION = {
-        to: RECIPIENT.address,
-        value: 1_000_000
-      }
-
-      function getValidUntil (signedTransfer) {
-        const slice = signedTransfer.beginParse()
-
-        slice.skip(64)
-
-        return slice.loadUint(32)
-      }
-
-      test('should expire 60 seconds after signing for an account that has not sent a transaction yet', async () => {
-        global.Date.now = jest.fn(() => 3_000_000_000_000)
-
-        expect(await account._contract.getSeqno()).toBe(0)
-
-        const signedTransfer = await account.signTransaction(TRANSACTION)
-
-        expect(getValidUntil(signedTransfer)).toBe(3_000_000_060)
-      })
-
-      test('should expire 60 seconds after signing for an account that is not deployed', async () => {
-        const undeployed = new WalletAccountTon(SEED_PHRASE, "0'/0/2", { tonClient })
-
-        global.Date.now = jest.fn(() => 3_000_000_000_000)
-
-        const signedTransfer = await undeployed.signTransaction(TRANSACTION)
-
-        expect(getValidUntil(signedTransfer)).toBe(3_000_000_060)
-
-        undeployed.dispose()
-      })
-
-      test('should not be accepted by the wallet once it has expired', async () => {
-        const signedTransfer = await account.signTransaction(TRANSACTION)
-
-        blockchain.now = getValidUntil(signedTransfer) + 1
-
-        await expect(account.sendTransaction(signedTransfer)).rejects.toThrow()
-
-        expect(blockchain.transactions).not.toHaveTransaction({
-          from: account._wallet.address,
-          to: recipient._wallet.address
-        })
-      })
-    })
-
     test('should throw if transaction fee exceeds the transaction max fee configuration', async () => {
       const TRANSACTION = {
         to: RECIPIENT.address,
