@@ -34,6 +34,8 @@ function mockCryptoRandomValues (...queryIds) {
   })
 }
 
+const originalDateNow = Date.now
+
 const originalCryptoGetRandomValues = globalThis.crypto.getRandomValues
 function restoreCryptoGetRandomValues () {
   globalThis.crypto.getRandomValues = originalCryptoGetRandomValues
@@ -116,6 +118,7 @@ describe('@wdk/wallet-ton', () => {
   })
 
   afterEach(() => {
+    global.Date.now = originalDateNow
     restoreCryptoGetRandomValues()
   })
 
@@ -221,6 +224,8 @@ describe('@wdk/wallet-ton', () => {
 
     const expectedQueryId = calculateQueryId(0.5, 0.25)
     mockCryptoRandomValues(expectedQueryId, expectedQueryId)
+    blockchain.now = Math.floor(originalDateNow() / 1000)
+    global.Date.now = jest.fn(() => 3_000_000_000_000)
 
     const { fee: quoteFee } = await account0.quoteTransfer(TRANSFER)
 
@@ -257,7 +262,7 @@ describe('@wdk/wallet-ton', () => {
 
     expect(fee).toBe(quoteFee)
 
-    expect(hash).toBe('1709a81900680ad42b9d97b5c3b3dbda78dc794ec8e87ab727bc04c8e3075f36')
+    expect(hash).toBe('dc0e85bf664e48ed9a5aa34c30fa4c52a6047fefc7e0d9fcc9d43e895bd7a484')
   })
 
   test('should derive two accounts by their paths, transfer a token from account 0 to 1 and get the correct balances and token balances', async () => {
