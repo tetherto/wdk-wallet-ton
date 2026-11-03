@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, jest } from '@jest/globals'
-import { beginCell, Address, SendMode, internal, fromNano } from '@ton/ton'
+import { beginCell, Address, SendMode, internal, fromNano, TupleReader } from '@ton/ton'
 import { JettonMinter } from '@ton-community/assets-sdk'
 
 import BlockchainWithLogs from './blockchain-with-logs.js'
@@ -114,6 +114,22 @@ describe('WalletAccountReadOnlyTon', () => {
       expect(balance).toEqual(INITIAL_TOKEN_BALANCE)
     })
 
+    test('should read the wallet data only once', async () => {
+      await sendTestTokensTo(ACCOUNT.address, INITIAL_TOKEN_BALANCE)
+
+      const runMethod = jest.spyOn(account._tonClient, 'runMethod')
+
+      await account.getTokenBalance(testToken.address.toString())
+
+      expect(runMethod.mock.calls.filter(([, name]) => name === 'get_wallet_data')).toHaveLength(1)
+    })
+
+    test('should return zero if the account has no jetton wallet', async () => {
+      const balance = await account.getTokenBalance(testToken.address.toString())
+
+      expect(balance).toBe(0n)
+    })
+
     test('should throw if the account is not connected to the ton center', async () => {
       const account = new WalletAccountReadOnlyTon(ACCOUNT.keyPair.publicKey)
 
@@ -180,6 +196,29 @@ describe('WalletAccountReadOnlyTon', () => {
       const result = await account.quoteTransfer(TRANSFER)
 
       expect(result).toEqual({ fee: ACTIVE_ACCOUNT_FEE })
+    })
+
+    test('should throw if the jetton master reports a contract that is not the account\'s jetton wallet', async () => {
+      await sendTonsTo(ACCOUNT.address, INITIAL_BALANCE, { init: account._wallet.init })
+
+      const tonClient = account._tonClient
+      const runMethod = tonClient.runMethod.bind(tonClient)
+
+      jest.spyOn(tonClient, 'runMethod').mockImplementation(async (target, name, stack) => {
+        if (name === 'get_wallet_address') {
+          return { stack: new TupleReader([{ type: 'slice', cell: beginCell().storeAddress(account._wallet.address).endCell() }]) }
+        }
+
+        return runMethod(target, name, stack)
+      })
+
+      await sendTestTokensTo(ACCOUNT.address, INITIAL_TOKEN_BALANCE)
+
+      await expect(account.quoteTransfer({
+        token: testToken.address.toString(),
+        recipient: 'UQAMM7wsXH_0T7aLFJvyD1RS_KBSt6AqGV8c4i_2PUMscnoY',
+        amount: 1_000
+      })).rejects.toThrow('The jetton master returned an invalid jetton wallet address.')
     })
 
     test('should throw if the account is not connected to ton center', async () => {

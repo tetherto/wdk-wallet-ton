@@ -15,14 +15,14 @@ export default class FakeTonClient extends TonClient {
     this._blockchain = blockchain
   }
 
-  async callGetMethod (address, name, stack) {
+  async runMethod (address, name, stack) {
     const result = await this._blockchain.runGetMethod(address, name, stack)
 
     if (result.exitCode !== 0) {
       throw new Error(`Unable to execute get method. Got exit_code: ${result.exitCode}`)
     }
 
-    return { gasUsed: result.gasUsed, stack: result.stackReader }
+    return { gas_used: result.gasUsed, stack: result.stackReader }
   }
 
   async getContractState (address) {
@@ -30,7 +30,7 @@ export default class FakeTonClient extends TonClient {
 
     const { state } = contract.accountState
 
-    return { code: state?.code, data: state?.data }
+    return { code: state?.code ? state.code.toBoc() : null, data: state?.data ? state.data.toBoc() : null }
   }
 
   async estimateExternalMessageFee (address, args) {

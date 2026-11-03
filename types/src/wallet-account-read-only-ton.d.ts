@@ -118,13 +118,31 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      */
     protected _isTransactionSuccessful(transaction?: TonTransactionReceipt): boolean | undefined;
     /**
-     * Returns the jetton wallet address of the given jetton.
+     * Returns the verified jetton wallet address of the given jetton.
      *
      * @protected
      * @param {string} tokenAddress - The jetton token address.
+     * @param {{ allowUndeployed?: boolean }} [options] - If `allowUndeployed` is set, an address with no contract deployed is accepted.
      * @returns {Promise<Address>} The jetton wallet address.
      */
-    protected _getJettonWalletAddress(tokenAddress: string): Promise<Address>;
+    protected _getJettonWalletAddress(tokenAddress: string, options?: {
+        allowUndeployed?: boolean;
+    }): Promise<Address>;
+    /**
+     * Returns the account's jetton wallet for the given jetton, after checking on chain that the
+     * address reported by the jetton master is that wallet.
+     *
+     * @protected
+     * @param {string} tokenAddress - The jetton token address.
+     * @param {{ allowUndeployed?: boolean }} [options] - If `allowUndeployed` is set, an address with no contract deployed is accepted (with a zero balance).
+     * @returns {Promise<{ address: Address, balance: bigint }>} The jetton wallet address and balance.
+     */
+    protected _getJettonWallet(tokenAddress: string, { allowUndeployed }?: {
+        allowUndeployed?: boolean;
+    }): Promise<{
+        address: Address;
+        balance: bigint;
+    }>;
     /**
      * Creates and returns an internal message to execute the given transaction.
      *
@@ -151,9 +169,12 @@ export default class WalletAccountReadOnlyTon extends WalletAccountReadOnly {
      *
      * @protected
      * @param {TransferOptions} options - The transfer's options.
+     * @param {{ allowUndeployed?: boolean }} [options] - If `allowUndeployed` is set, an address with no contract deployed is accepted.
      * @returns {Promise<MessageRelaxed>} The internal message.
      */
-    protected _getTokenTransferMessage({ token, recipient, amount }: TransferOptions): Promise<MessageRelaxed>;
+    protected _getTokenTransferMessage({ token, recipient, amount }: TransferOptions, { allowUndeployed }?: {
+        allowUndeployed?: boolean;
+    }): Promise<MessageRelaxed>;
     /**
      * Creates and returns a v5r1 transfer to execute the given message.
      *
