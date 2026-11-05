@@ -209,6 +209,7 @@ describe('WalletAccountTon', () => {
 
   describe('sendTransaction', () => {
     test('should successfully send a transaction', async () => {
+      global.Date.now = jest.fn(() => 3_000_000_000_000)
       const TRANSACTION = {
         to: RECIPIENT.address,
         value: 1_000_000
@@ -223,7 +224,7 @@ describe('WalletAccountTon', () => {
         success: true
       })
 
-      expect(hash).toBe('fee3cb87605424ffa9fd23da23b10ab71856371286d2b92481eb6f5e52c408d0')
+      expect(hash).toBe('8d97d8f900c25b88e4e73f6e40a048761d9cae30f14c177c8c7f5af97305cc99')
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
     })
@@ -329,6 +330,7 @@ describe('WalletAccountTon', () => {
     })
 
     test('should broadcast an already-signed transaction', async () => {
+      global.Date.now = jest.fn(() => 3_000_000_000_000)
       const signedTransfer = await buildSignedTransferCell(account, {
         to: RECIPIENT.address,
         value: 1_000_000
@@ -343,12 +345,13 @@ describe('WalletAccountTon', () => {
         success: true
       })
 
-      expect(hash).toBe('fee3cb87605424ffa9fd23da23b10ab71856371286d2b92481eb6f5e52c408d0')
+      expect(hash).toBe('8d97d8f900c25b88e4e73f6e40a048761d9cae30f14c177c8c7f5af97305cc99')
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
     })
 
     test('should successfully send a transaction that overrides bounceability', async () => {
+      global.Date.now = jest.fn(() => 3_000_000_000_000)
       const TRANSACTION = {
         to: RECIPIENT.address,
         value: 1_000_000,
@@ -365,7 +368,7 @@ describe('WalletAccountTon', () => {
         success: true
       })
 
-      expect(hash).toBe('8ffd77bd8c288153ace6af368f8242504bbe31e74c911bd5b9851e981281011f')
+      expect(hash).toBe('41b6fd94ac8dbb2c0b3f5f9b82cb10628e638080992ba6df9d32960d86bc1aad')
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
     })
@@ -381,7 +384,7 @@ describe('WalletAccountTon', () => {
       const result2 = await account.sendTransaction(TRANSACTION)
       const result3 = await account.sendTransaction(TRANSACTION)
 
-      expect(result1.hash).toBe('fee3cb87605424ffa9fd23da23b10ab71856371286d2b92481eb6f5e52c408d0')
+      expect(result1.hash).toBe('8d97d8f900c25b88e4e73f6e40a048761d9cae30f14c177c8c7f5af97305cc99')
       expect(result2.hash).toBe('37eea3745d012fd0b687676517e87bafe0ae6933afb4c4aaa65bc098812237ca')
       expect(result3.hash).toBe('02540de8ae0b1e499a46b7c5ec733bedcacaa2bf426570d29c4ae25a14eca588')
     })
@@ -461,6 +464,7 @@ describe('WalletAccountTon', () => {
 
   describe('signTransaction', () => {
     test('should sign a transaction and return the signed transfer cell without broadcasting', async () => {
+      global.Date.now = jest.fn(() => 3_000_000_000_000)
       const TRANSACTION = {
         to: RECIPIENT.address,
         value: 1_000_000
@@ -468,7 +472,7 @@ describe('WalletAccountTon', () => {
 
       const signedTransfer = await account.signTransaction(TRANSACTION)
 
-      expect(signedTransfer.hash().toString('hex')).toBe('fee3cb87605424ffa9fd23da23b10ab71856371286d2b92481eb6f5e52c408d0')
+      expect(signedTransfer.hash().toString('hex')).toBe('8d97d8f900c25b88e4e73f6e40a048761d9cae30f14c177c8c7f5af97305cc99')
 
       expect(blockchain.transactions).not.toHaveTransaction({
         from: account._wallet.address,
@@ -533,6 +537,8 @@ describe('WalletAccountTon', () => {
 
   describe('transfer', () => {
     test('should successfully transfer tokens', async () => {
+      blockchain.now = Math.floor(originalDateNow() / 1000)
+      global.Date.now = jest.fn(() => 3_000_000_000_000)
       const TRANSFER = {
         token: testToken.address.toString(),
         recipient: RECIPIENT.address,
@@ -572,7 +578,7 @@ describe('WalletAccountTon', () => {
         success: true
       })
 
-      expect(hash).toBe('80d5f87f50b39be73b038e968dc19bae93ae7a216287ee604575f7bd3a99a957')
+      expect(hash).toBe('83f33795d7c83c2bd3373e76ac4f7096533fde525386403bb4ddebfc0d77101d')
 
       expect(fee).toBe(ACTIVE_ACCOUNT_FEE)
     })
@@ -707,7 +713,7 @@ describe('WalletAccountTon', () => {
       const result2 = await account.transfer(TRANSFER)
       const result3 = await account.transfer(TRANSFER)
 
-      expect(result1.hash).toBe('7b2642875123f7259619b9a2b7836295b8c4e60fd4ccb81fdb2d19c75868b73d')
+      expect(result1.hash).toBe('eac205875e0366a7610963ef61579f0d5769b67d8791604afd0f032d506eda85')
       expect(result2.hash).toBe('e36b6b040ea2d435c9448fc10a114557fe9c6cf6741d6ebe1979e89dd96cb045')
       expect(result3.hash).toBe('fa4d2dbff39c89f69f8986f4d507398da99dbe44a32fdbac380267b6f1f5fa2c')
     })
