@@ -149,9 +149,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
    * @throws {DisposalError} If the account has been disposed.
    */
   async sign (message) {
-    if (this.disposed) {
-      throw new DisposalError('The account has been disposed.')
-    }
+    this._guardDisposed()
 
     return sign(getMessageSigningHash(message), this._keyPair.secretKey)
       .toString('hex')
@@ -166,9 +164,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
    * @throws {DisposalError} If the account has been disposed.
    */
   async signTransaction (tx) {
-    if (this.disposed) {
-      throw new DisposalError('The account has been disposed.')
-    }
+    this._guardDisposed()
 
     if (!this._tonClient) {
       throw new Error('The wallet must be connected to ton center to sign transactions.')
@@ -217,9 +213,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
    * @throws {DisposalError} If the account has been disposed.
    */
   async sendTransaction (tx) {
-    if (this.disposed) {
-      throw new DisposalError('The account has been disposed.')
-    }
+    this._guardDisposed()
 
     if (!this._tonClient) {
       throw new Error('The wallet must be connected to ton center to send transactions.')
@@ -254,9 +248,7 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
    */
 
   async transfer (options) {
-    if (this.disposed) {
-      throw new DisposalError('The account has been disposed.')
-    }
+    this._guardDisposed()
 
     if (!this._tonClient) {
       throw new Error('The wallet must be connected to ton center to transfer tokens.')
@@ -316,5 +308,12 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon {
     })
 
     return transfer
+  }
+
+  /** @private */
+  _guardDisposed () {
+    if (this.disposed) {
+      throw new DisposalError('The account has been disposed.')
+    }
   }
 }

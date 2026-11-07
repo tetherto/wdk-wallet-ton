@@ -101,6 +101,8 @@ export default class WalletAccountTon extends WalletAccountReadOnlyTon implement
      * Disposes the wallet account, erasing the private key from the memory.
      */
     dispose(): void;
+    /** @private */
+    private _guardDisposed;
 }
 export type MessageRelaxed = import("@ton/ton").MessageRelaxed;
 export type TonTransactionReceipt = import("@ton/ton").Transaction;
