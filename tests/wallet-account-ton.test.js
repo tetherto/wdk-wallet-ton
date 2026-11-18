@@ -6,6 +6,8 @@ import { JettonMinter } from '@ton-community/assets-sdk'
 
 import * as bip39 from 'bip39'
 
+import { DisposalError } from '@tetherto/wdk-wallet'
+
 import BlockchainWithLogs from './blockchain-with-logs.js'
 import FakeTonClient, { ACTIVE_ACCOUNT_FEE } from './fake-ton-client.js'
 
@@ -182,6 +184,31 @@ describe('WalletAccountTon', () => {
       // eslint-disable-next-line no-new
       expect(() => { new WalletAccountTon(SEED_PHRASE, "a'/b/c") })
         .toThrow('Invalid child index: a\'')
+    })
+  })
+
+  describe('dispose', () => {
+    const DUMMY_ADDRESS = 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+
+    test('should expose the disposed state', () => {
+      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0")
+
+      expect(account.disposed).toBe(false)
+
+      account.dispose()
+
+      expect(account.disposed).toBe(true)
+    })
+
+    test('should throw DisposalError from signing methods once disposed', async () => {
+      const account = new WalletAccountTon(SEED_PHRASE, "0'/0/0")
+
+      account.dispose()
+
+      await expect(account.sign('message')).rejects.toThrow(DisposalError)
+      await expect(account.signTransaction({ to: DUMMY_ADDRESS, value: 1n })).rejects.toThrow(DisposalError)
+      await expect(account.sendTransaction({ to: DUMMY_ADDRESS, value: 1n })).rejects.toThrow(DisposalError)
+      await expect(account.transfer({ token: DUMMY_ADDRESS, recipient: DUMMY_ADDRESS, amount: 1n })).rejects.toThrow(DisposalError)
     })
   })
 
