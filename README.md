@@ -32,6 +32,7 @@ const wallet = new WalletManagerTon(seedPhrase, {
   tonClient: {
     url: 'https://testnet.toncenter.com/api/v2/jsonRPC',
   },
+  networkGlobalId: -3, // required for testnet; default -239 is mainnet
   transferMaxFee: 1_000_000_000n,
 })
 
@@ -41,6 +42,9 @@ console.log('Address:', address)
 
 wallet.dispose()
 ```
+
+> **Note:** On testnet use `networkGlobalId: -3`. Addresses differ from mainnet (`-239`). Setting `-239` on testnet still produces the old address; funds left there can be moved by explicitly using `-239`.
+
 
 ## Key Capabilities
 
@@ -79,24 +83,7 @@ wallet.dispose()
 | [Send Transaction](https://github.com/tetherto/wdk-examples/blob/main/wallet-ton/send-transaction.ts) | Estimate fees and send native TON transactions |
 | [Token Transfer](https://github.com/tetherto/wdk-examples/blob/main/wallet-ton/token-transfer.ts) | Transfer Jettons and estimate transfer fees |
 | [Sign & Verify Message](https://github.com/tetherto/wdk-examples/blob/main/wallet-ton/sign-verify-message.ts) | Sign messages and verify signatures |
-| [Fee Management](https://github.com/tetherto/wdk-examples/blob/main/wallet-ton/fee-management.ts) | Retrieve current network fee rates |
-| [Memory Management](https://github.com/tetherto/wdk-examples/blob/main/wallet-ton/memory-management.ts) | Securely dispose wallets and clear private keys from memory |
-
-> For detailed walkthroughs, see the [Usage Guide](https://docs.wdk.tether.io/sdk/wallet-modules/wallet-ton/usage).
-> See all runnable examples in the [wdk-examples](https://github.com/tetherto/wdk-examples) repository.
-
-## Community
-
-Join the [WDK Discord](https://discord.gg/arYXDhHB2w) to connect with other developers.
-
-## Support
-
-For support, please [open an issue](https://github.com/tetherto/wdk-wallet-ton/issues) on GitHub or reach out via [email](mailto:wallet-info@tether.io).
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+This package is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
